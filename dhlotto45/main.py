@@ -41,6 +41,7 @@ client: Optional[DhLotteryClient] = None
 lotto_645: Optional[DhLotto645] = None
 analyzer: Optional[DhLottoAnalyzer] = None
 mqtt_client: Optional[MQTTDiscovery] = None
+event_loop: Optional[asyncio.AbstractEventLoop] = None
 
 
 # ============================================================================
@@ -101,42 +102,48 @@ def _get_lotto645_item(data: dict) -> dict:
 async def register_buttons():
     """Register button entities via MQTT Discovery"""
     if not mqtt_client or not mqtt_client.connected:
-        logger.warning("MQTT not connected, skipping button registration")
+        logger.warning("[BUTTON] MQTT not connected, skipping button registration")
         return
     
     username = config["username"]
-    logger.info(f"Registering button entities for user: {username}")
+    logger.info(f"[BUTTON] Registering button entities for user: {username}")
     
     # Button 1: Buy 1 Auto Game
+    button1_topic = f"homeassistant/button/dhlotto_{username}_buy_auto_1/command"
+    logger.info(f"[BUTTON] Button 1 command topic: {button1_topic}")
+    
     success1 = mqtt_client.publish_button_discovery(
         button_id="buy_auto_1",
         name="Buy 1 Auto Game",
-        command_topic=f"homeassistant/button/dhlotto_{username}_buy_auto_1/command",
+        command_topic=button1_topic,
         username=username,
         icon="mdi:ticket-confirmation",
     )
     if success1:
-        logger.info(" Button registered: buy_auto_1")
+        logger.info("[BUTTON] Button registered: buy_auto_1")
     else:
-        logger.error(" Failed to register button: buy_auto_1")
+        logger.error("[BUTTON] Failed to register button: buy_auto_1")
     
     # Button 2: Buy 5 Auto Games (Max)
+    button2_topic = f"homeassistant/button/dhlotto_{username}_buy_auto_5/command"
+    logger.info(f"[BUTTON] Button 2 command topic: {button2_topic}")
+    
     success2 = mqtt_client.publish_button_discovery(
         button_id="buy_auto_5",
         name="Buy 5 Auto Games",
-        command_topic=f"homeassistant/button/dhlotto_{username}_buy_auto_5/command",
+        command_topic=button2_topic,
         username=username,
         icon="mdi:ticket-confirmation-outline",
     )
     if success2:
-        logger.info(" Button registered: buy_auto_5")
+        logger.info("[BUTTON] Button registered: buy_auto_5")
     else:
-        logger.error(" Failed to register button: buy_auto_5")
+        logger.error("[BUTTON] Failed to register button: buy_auto_5")
     
     if success1 and success2:
-        logger.info(" All button entities registered successfully")
+        logger.info("[BUTTON] All button entities registered successfully")
     else:
-        logger.warning(" Some buttons failed to register")
+        logger.warning("[BUTTON] Some buttons failed to register")
 
 
 def on_button_command(client_mqtt, userdata, message):
@@ -145,38 +152,50 @@ def on_button_command(client_mqtt, userdata, message):
         topic = message.topic
         payload = message.payload.decode()
         
-        logger.info(f" Received button command: topic={topic}, payload={payload}")
+        logger.info(f"[BUTTON] Received command: topic={topic}, payload={payload}")
         
         # Extract button_id from topic
         # Format: homeassistant/button/dhlotto_USERNAME_BUTTON_ID/command
         parts = topic.split("/")
         if len(parts) >= 3:
             entity_id = parts[2]  # dhlotto_USERNAME_BUTTON_ID
+            logger.info(f"[BUTTON] Entity ID: {entity_id}")
             
             # Extract button_id (buy_auto_1, buy_auto_5, etc.)
             # entity_id format: dhlotto_ng410808_buy_auto_1
             parts_entity = entity_id.split("_")
+            logger.info(f"[BUTTON] Entity parts: {parts_entity}")
+            
             if len(parts_entity) >= 4:
                 # Extract last 3 parts: buy_auto_1
                 button_id = "_".join(parts_entity[-3:])
                 
-                logger.info(f" Button pressed: {button_id}")
+                logger.info(f"[BUTTON] Button pressed: {button_id}")
                 
-                # Execute purchase in background
-                asyncio.create_task(execute_button_purchase(button_id))
+                # Execute purchase in background using the event loop
+                if event_loop and event_loop.is_running():
+                    asyncio.run_coroutine_threadsafe(
+                        execute_button_purchase(button_id), 
+                        event_loop
+                    )
+                    logger.info(f"[BUTTON] Purchase task scheduled for {button_id}")
+                else:
+                    logger.error("[BUTTON] Event loop not available or not running")
             else:
-                logger.error(f" Invalid entity_id format: {entity_id}")
+                logger.error(f"[BUTTON] Invalid entity_id format: {entity_id}")
         else:
-            logger.error(f" Invalid topic format: {topic}")
+            logger.error(f"[BUTTON] Invalid topic format: {topic}")
     
     except Exception as e:
-        logger.error(f" Error handling button command: {e}", exc_info=True)
+        logger.error(f"[BUTTON] Error handling button command: {e}", exc_info=True)
 
 
 async def execute_button_purchase(button_id: str):
     """Execute purchase based on button_id"""
+    logger.info(f"[PURCHASE] Starting purchase for button_id: {button_id}")
+    
     if not lotto_645:
-        logger.error("Lotto 645 not enabled")
+        logger.error("[PURCHASE] Lotto 645 not enabled")
         return
     
     try:
@@ -189,40 +208,59 @@ async def execute_button_purchase(button_id: str):
         elif button_id == "buy_auto_1":
             count = 1
         else:
-            logger.warning(f"Unknown button_id: {button_id}, defaulting to 1 game")
+            logger.warning(f"[PURCHASE] Unknown button_id: {button_id}, defaulting to 1 game")
             count = 1
         
-        # Create auto game slots (simple and correct way)
+        logger.info(f"[PURCHASE] Creating {count} auto game slots...")
+        
+        # Create auto game slots
         slots = [DhLotto645.Slot(mode=DhLotto645SelMode.AUTO, numbers=[]) for _ in range(count)]
         
-        logger.info(f"Executing purchase: {count} game(s)...")
+        logger.info(f"[PURCHASE] Executing purchase: {count} game(s)...")
         
         # Execute purchase
         result = await lotto_645.async_buy(slots)
         
-        logger.info(f"Purchase successful! Round: {result.round_no}, Barcode: {result.barcode}")
+        logger.info(f"[PURCHASE] Purchase successful!")
+        logger.info(f"[PURCHASE] Round: {result.round_no}")
+        logger.info(f"[PURCHASE] Barcode: {result.barcode}")
+        logger.info(f"[PURCHASE] Issue Date: {result.issue_dt}")
+        logger.info(f"[PURCHASE] Games: {len(result.games)}")
         
         # Send notification via sensor update
-        await publish_sensor("lotto45_last_purchase", datetime.now(timezone.utc).isoformat(), {
+        purchase_data = {
             "round_no": result.round_no,
             "barcode": result.barcode,
             "issue_dt": result.issue_dt,
             "games_count": len(result.games),
+            "games": [{"slot": g.slot, "numbers": g.numbers} for g in result.games],
             "friendly_name": "Last Purchase",
             "icon": "mdi:receipt",
-        })
+        }
+        
+        logger.info(f"[PURCHASE] Publishing last purchase sensor...")
+        await publish_sensor("lotto45_last_purchase", datetime.now(timezone.utc).isoformat(), purchase_data)
         
         # Update sensors immediately after purchase
+        logger.info(f"[PURCHASE] Updating all sensors...")
         await update_sensors()
         
+        logger.info(f"[PURCHASE] Purchase completed successfully!")
+        
     except Exception as e:
-        logger.error(f"Purchase failed: {e}", exc_info=True)
+        logger.error(f"[PURCHASE] Purchase failed: {e}", exc_info=True)
         
         # Send error notification
-        await publish_sensor("lotto45_last_purchase_error", str(e), {
+        error_data = {
+            "error": str(e),
+            "button_id": button_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "friendly_name": "Last Purchase Error",
             "icon": "mdi:alert-circle",
-        })
+        }
+        
+        logger.info(f"[PURCHASE] Publishing error sensor...")
+        await publish_sensor("lotto45_last_purchase_error", str(e), error_data)
 
 
 async def init_client():
@@ -301,11 +339,17 @@ async def cleanup_client():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifecycle manager"""
+    global event_loop
+    
     # Startup
     logger.info("Starting Lotto 45 Add-on v0.5.3...")
     logger.info(f"Configuration: username={config['username']}, "
                 f"enable_lotto645={config['enable_lotto645']}, "
                 f"update_interval={config['update_interval']}")
+    
+    # Get and store the event loop
+    event_loop = asyncio.get_running_loop()
+    logger.info(f"Event loop stored: {event_loop}")
     
     # Initialize client
     await init_client()
@@ -704,9 +748,12 @@ async def publish_sensor(entity_id: str, state, attributes: dict = None):
         state: Sensor state value
         attributes: Sensor attributes dictionary
     """
+    logger.debug(f"[SENSOR] Publishing {entity_id}: {state}")
+    
     # Try MQTT first if enabled
     if config["use_mqtt"] and mqtt_client and mqtt_client.connected:
         try:
+            logger.debug(f"[SENSOR] Using MQTT for {entity_id}")
             success = await publish_sensor_mqtt(
                 mqtt_client=mqtt_client,
                 entity_id=entity_id,
@@ -715,22 +762,23 @@ async def publish_sensor(entity_id: str, state, attributes: dict = None):
                 attributes=attributes
             )
             if success:
-                logger.debug(f"Published sensor via MQTT: {entity_id}")
+                logger.debug(f"[SENSOR] Published via MQTT: {entity_id}")
                 return
             else:
-                logger.warning(f"MQTT publish failed for {entity_id}, falling back to REST API")
+                logger.warning(f"[SENSOR] MQTT publish failed for {entity_id}, falling back to REST API")
         except Exception as e:
-            logger.error(f"Error publishing sensor via MQTT: {e}")
+            logger.error(f"[SENSOR] Error publishing via MQTT: {e}")
     
     # Fallback to REST API
     import aiohttp
     
     if not config["supervisor_token"]:
-        logger.debug(f"Skipping sensor publish (no token): {entity_id}")
+        logger.debug(f"[SENSOR] Skipping sensor publish (no token): {entity_id}")
         return
     
     # Add addon_ prefix to prevent conflicts with integration
     addon_entity_id = f"addon_{config['username']}_{entity_id}"
+    logger.debug(f"[SENSOR] Using REST API for {addon_entity_id}")
 
     url = f"{config['ha_url']}/api/states/sensor.{addon_entity_id}"
     headers = {
@@ -746,11 +794,11 @@ async def publish_sensor(entity_id: str, state, attributes: dict = None):
         async with aiohttp.ClientSession() as session:
             async with session.post(url, json=data, headers=headers, ssl=False) as resp:
                 if resp.status not in [200, 201]:
-                    logger.error(f"Failed to publish sensor {addon_entity_id}: {resp.status} - {await resp.text()}")
+                    logger.error(f"[SENSOR] Failed to publish {addon_entity_id}: {resp.status} - {await resp.text()}")
                 else:
-                    logger.debug(f"Published sensor via REST API: {addon_entity_id}: {state}")
+                    logger.debug(f"[SENSOR] Published via REST API: {addon_entity_id}: {state}")
     except Exception as e:
-        logger.error(f"Error publishing sensor {addon_entity_id}: {e}")
+        logger.error(f"[SENSOR] Error publishing {addon_entity_id}: {e}")
 
 
 @app.get("/", response_class=HTMLResponse)
