@@ -23,10 +23,10 @@
     "use_mqtt": "bool?"
   },
   "ports": {
-    "8099/tcp": 8099
+    "60099/tcp": 60099
   },
   "ports_description": {
-    "8099/tcp": "Web UI 및 API"
+    "60099/tcp": "Web UI 및 API"
   },
   "homeassistant_api": true,
   "hassio_api": true,
