@@ -1,6 +1,6 @@
 """
 Lotto 45 Add-on Main Application v2.0
-Home Assistant Add-on for ë™í–‰ë³µê¶Œ ë¡œë˜ 6/45
+Home Assistant Add-on for DH Lottery 6/45
 """
 
 import os
@@ -17,14 +17,14 @@ from dh_lottery_client import DhLotteryClient
 from dh_lotto_645 import DhLotto645
 from dh_lotto_analyzer import DhLottoAnalyzer
 
-# ë¡œê·¸ ì„¤ì •
+# Logging setup
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# ì „ì—­ ë³€ìˆ˜
+# Configuration variables
 config = {
     "username": os.getenv("USERNAME", ""),
     "password": os.getenv("PASSWORD", ""),
@@ -41,11 +41,11 @@ analyzer: Optional[DhLottoAnalyzer] = None
 
 
 # ============================================================================
-# í—¬í¼ í•¨ìˆ˜ë“¤ (ì»´í¬ë„ŒíŠ¸ ì½”ë“œì—ì„œ ê°€ì ¸ì˜´)
+# Helper Functions (for component compatibility)
 # ============================================================================
 
 def _safe_int(value) -> int:
-    """ì•ˆì „í•œ ì •ìˆ˜ ë³€í™˜"""
+    """Safe integer conversion"""
     if value is None:
         return 0
     if isinstance(value, int):
@@ -59,13 +59,13 @@ def _safe_int(value) -> int:
 
 
 def _format_with_commas(value) -> str:
-    """ì²œ ë‹¨ìœ„ ì½¤ë§ˆ í¬ë§·"""
+    """Format number with thousand separators"""
     n = _safe_int(value)
     return f"{n:,}"
 
 
 def _parse_yyyymmdd(text: str) -> Optional[str]:
-    """YYYYMMDD -> YYYY-MM-DD ë³€í™˜"""
+    """Convert YYYYMMDD to YYYY-MM-DD format"""
     if not text or not isinstance(text, str):
         return None
     text = text.strip()
@@ -82,13 +82,13 @@ def _parse_yyyymmdd(text: str) -> Optional[str]:
 
 
 def _get_lotto645_item(data: dict) -> dict:
-    """ë¡œë˜645 ê²°ê³¼ ë°ì´í„° ì¶”ì¶œ"""
+    """Extract lotto645 result data"""
     if not data:
         return {}
-    # _rawê°€ ìžˆìœ¼ë©´ ìš°ì„  ì‚¬ìš©
+    # Use _raw if available
     if "_raw" in data:
         return data["_raw"]
-    # data.list[0] êµ¬ì¡°
+    # Use data.list[0] structure
     items = data.get("list", [])
     if items:
         return items[0]
@@ -96,7 +96,7 @@ def _get_lotto645_item(data: dict) -> dict:
 
 
 async def init_client():
-    """í´ë¼ì´ì–¸íŠ¸ ì´ˆê¸°í™”"""
+    """Initialize client"""
     global client, lotto_645, analyzer
     
     if not config["username"] or not config["password"]:
@@ -120,7 +120,7 @@ async def init_client():
 
 
 async def cleanup_client():
-    """í´ë¼ì´ì–¸íŠ¸ ì •ë¦¬"""
+    """Clean up client"""
     global client
     if client:
         try:
@@ -132,17 +132,17 @@ async def cleanup_client():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """ì• í”Œë¦¬ì¼€ì´ì…˜ ë¼ì´í”„ì‚¬ì´í´ ê´€ë¦¬"""
+    """Application lifecycle manager"""
     # Startup
     logger.info("Starting Lotto 45 Add-on v2.0...")
     logger.info(f"Configuration: username={config['username']}, "
                 f"enable_lotto645={config['enable_lotto645']}, "
                 f"update_interval={config['update_interval']}")
     
-    # í´ë¼ì´ì–¸íŠ¸ ì´ˆê¸°í™”
+    # Initialize client
     await init_client()
     
-    # ë°±ê·¸ë¼ìš´ë“œ ìž‘ì—… ì‹œìž‘
+    # Start background task
     task = asyncio.create_task(background_tasks())
     
     logger.info("Add-on started successfully")
@@ -160,7 +160,7 @@ async def lifespan(app: FastAPI):
     logger.info("Add-on shut down successfully")
 
 
-# FastAPI ì•±
+# FastAPI app
 app = FastAPI(
     title="Lotto 45",
     version="2.0.0",
@@ -169,8 +169,8 @@ app = FastAPI(
 
 
 async def background_tasks():
-    """ë°±ê·¸ë¼ìš´ë“œ ìž‘ì—…"""
-    # ì´ˆê¸° ì§€ì—°
+    """Background tasks"""
+    # Initial delay
     await asyncio.sleep(10)
     
     while True:
@@ -186,7 +186,7 @@ async def background_tasks():
 
 
 async def update_sensors():
-    """센서 업데이트 - 개선된 버전"""
+    """Update sensors - improved version"""
     if not client or not client.logged_in:
         logger.warning("Client not logged in, attempting to login...")
         try:
@@ -198,10 +198,10 @@ async def update_sensors():
     try:
         logger.info("Updating sensors...")
         
-        # 1. 예치금 조회
+        # 1. Get balance
         balance = await client.async_get_balance()
         
-        # 계정 관련 센서
+        # Balance sensor
         await publish_sensor("lotto45_balance", balance.deposit, {
             "purchase_available": balance.purchase_available,
             "reservation_purchase": balance.reservation_purchase,
@@ -212,9 +212,9 @@ async def update_sensors():
             "icon": "mdi:wallet",
         })
         
-        # 2. 로또 통계 업데이트
+        # 2. Update lotto statistics
         if config["enable_lotto645"] and analyzer:
-            # 로또 결과 조회
+            # Get lotto results
             try:
                 latest_round_info = await lotto_645.async_get_round_info()
                 lotto_result = {
@@ -231,29 +231,29 @@ async def update_sensors():
                     }
                 }
                 
-                # 로또 결과 센서들
+                # Lotto result sensors
                 item = _get_lotto645_item(lotto_result)
                 
-                # 회차
+                # Round number
                 await publish_sensor("lotto645_round", _safe_int(item.get("ltEpsd")), {
                     "friendly_name": "Lotto 645 Round",
                     "icon": "mdi:counter",
                 })
                 
-                # 번호 1-6
+                # Numbers 1-6
                 for i in range(1, 7):
                     await publish_sensor(f"lotto645_number{i}", _safe_int(item.get(f"tm{i}WnNo")), {
                         "friendly_name": f"Lotto 645 Number {i}",
                         "icon": f"mdi:numeric-{i}-circle",
                     })
                 
-                # 보너스 번호
+                # Bonus number
                 await publish_sensor("lotto645_bonus", _safe_int(item.get("bnsWnNo")), {
                     "friendly_name": "Lotto 645 Bonus",
                     "icon": "mdi:star-circle",
                 })
                 
-                # 추첨일
+                # Draw date
                 draw_date = _parse_yyyymmdd(item.get("ltRflYmd"))
                 if draw_date:
                     await publish_sensor("lotto645_draw_date", draw_date, {
@@ -265,7 +265,7 @@ async def update_sensors():
             except Exception as e:
                 logger.warning(f"Failed to fetch lotto results: {e}")
             
-            # 번호 빈도 분석
+            # Number frequency analysis
             try:
                 frequency = await analyzer.async_analyze_number_frequency(50)
                 top_num = frequency[0] if frequency else None
@@ -280,7 +280,7 @@ async def update_sensors():
             except Exception as e:
                 logger.warning(f"Failed to analyze frequency: {e}")
             
-            # Hot/Cold 번호
+            # Hot/Cold numbers
             try:
                 hot_cold = await analyzer.async_get_hot_cold_numbers(20)
                 await publish_sensor("lotto45_hot_numbers", 
@@ -298,7 +298,7 @@ async def update_sensors():
             except Exception as e:
                 logger.warning(f"Failed to get hot/cold numbers: {e}")
             
-            # 구매 통계
+            # Purchase statistics
             try:
                 stats = await analyzer.async_get_purchase_statistics(365)
                 await publish_sensor("lotto45_total_winning", stats.total_winning_amount, {
@@ -315,7 +315,7 @@ async def update_sensors():
             except Exception as e:
                 logger.warning(f"Failed to get purchase stats: {e}")
         
-        # 업데이트 시간 기록
+        # Update time
         now = datetime.now().isoformat()
         await publish_sensor("lotto45_last_update", now, {
             "friendly_name": "Last Update",
@@ -329,14 +329,14 @@ async def update_sensors():
         logger.error(f"Failed to update sensors: {e}", exc_info=True)
 
 async def publish_sensor(entity_id: str, state, attributes: dict = None):
-    """ì„¼ì„œ ìƒíƒœ ë°œí–‰ (REST API ì‚¬ìš©)"""
+    """Publish sensor state (REST API)"""
     import aiohttp
     
     if not config["supervisor_token"]:
         logger.debug(f"Skipping sensor publish (no token): {entity_id}")
         return
     
-    # 🆕 애드온 전용 프리픽스 추가 (통합구성요소와 충돌 방지)
+    # Add addon_ prefix to prevent conflicts with integration
     addon_entity_id = f"addon_{entity_id}"
 
     url = f"{config['ha_url']}/api/states/sensor.{addon_entity_id}"
@@ -362,8 +362,8 @@ async def publish_sensor(entity_id: str, state, attributes: dict = None):
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
-    """ë£¨íŠ¸ íŽ˜ì´ì§€"""
-    status_icon = "ðŸŸ¢" if client and client.logged_in else "ðŸ”´"
+    """Main page"""
+    status_icon = "🟢" if client and client.logged_in else "🔴"
     status_text = "Connected" if client and client.logged_in else "Disconnected"
     
     return f"""
@@ -383,7 +383,7 @@ async def root():
             </style>
         </head>
         <body>
-            <h1>ë™í–‰ë³µê¶Œ ë¡œë˜ 45 <span class="version">v2.0</span></h1>
+            <h1>DH Lottery Lotto 45 <span class="version">v2.0</span></h1>
             <div class="status">
                 Status: {status_icon} {status_text}
             </div>
@@ -391,20 +391,20 @@ async def root():
                 <p><strong>Username:</strong> {config['username']}</p>
                 <p><strong>Update Interval:</strong> {config['update_interval']}s</p>
                 <p><strong>Lotto 645 Enabled:</strong> {config['enable_lotto645']}</p>
-                <p><strong>Version:</strong> 2.0.0 (ê°œì„ ëœ ë¡œê·¸ì¸ & ì„¼ì„œ)</p>
+                <p><strong>Version:</strong> 2.0.0 (Improved Login & Sensors)</p>
             </div>
             <h2>Features v2.0</h2>
             <ul>
-                <li>âœ… ê°œì„ ëœ ë¡œê·¸ì¸ (RSA ì•”í˜¸í™” + ì„¸ì…˜ ì›Œë°ì—…)</li>
-                <li>âœ… User-Agent ë¡œí…Œì´ì…˜ (ì°¨ë‹¨ ë°©ì§€)</li>
-                <li>âœ… Circuit Breaker (ì—°ì† ì‹¤íŒ¨ ë°©ì§€)</li>
-                <li>âœ… í–¥ìƒëœ ì„¼ì„œ ì •ì˜</li>
+                <li>✅ Improved login (RSA encryption + session management)</li>
+                <li>✅ User-Agent rotation (anti-bot detection)</li>
+                <li>✅ Circuit Breaker (continuous failure prevention)</li>
+                <li>✅ HA Sensor integration</li>
             </ul>
             <h2>Links</h2>
             <ul>
-                <li><a href="/docs">API Documentation</a></li>
-                <li><a href="/health">Health Check</a></li>
-                <li><a href="/stats">Statistics</a></li>
+                <li><a href="docs">API Documentation</a></li>
+                <li><a href="health">Health Check</a></li>
+                <li><a href="stats">Statistics</a></li>
             </ul>
         </body>
     </html>
@@ -413,7 +413,7 @@ async def root():
 
 @app.get("/health")
 async def health():
-    """í—¬ìŠ¤ì²´í¬"""
+    """Health check"""
     return {
         "status": "ok" if client and client.logged_in else "error",
         "logged_in": client.logged_in if client else False,
@@ -425,7 +425,7 @@ async def health():
 
 @app.post("/random")
 async def generate_random(count: int = 6, games: int = 1):
-    """ëžœë¤ ë²ˆí˜¸ ìƒì„±"""
+    """Generate random numbers"""
     if not analyzer:
         raise HTTPException(status_code=400, detail="Lotto 645 not enabled")
     
@@ -445,7 +445,7 @@ async def generate_random(count: int = 6, games: int = 1):
 
 @app.post("/check")
 async def check_winning(numbers: list[int], round_no: Optional[int] = None):
-    """ë‹¹ì²¨ í™•ì¸"""
+    """Check winning"""
     if not analyzer:
         raise HTTPException(status_code=400, detail="Lotto 645 not enabled")
     
@@ -464,7 +464,7 @@ async def check_winning(numbers: list[int], round_no: Optional[int] = None):
 
 @app.get("/stats")
 async def get_stats():
-    """í†µê³„ ì¡°íšŒ"""
+    """Get statistics"""
     if not analyzer:
         raise HTTPException(status_code=400, detail="Lotto 645 not enabled")
     
@@ -500,7 +500,7 @@ async def get_stats():
 
 @app.get("/balance")
 async def get_balance():
-    """ì˜ˆì¹˜ê¸ˆ ì¡°íšŒ"""
+    """Get balance"""
     if not client:
         raise HTTPException(status_code=400, detail="Client not initialized")
     
@@ -520,18 +520,18 @@ async def get_balance():
 
 @app.post("/buy")
 async def buy_lotto(games: list[dict]):
-    """ë¡œë˜ 6/45 êµ¬ë§¤
+    """Buy Lotto 6/45
     
     Args:
-        games: ê²Œìž„ ë¦¬ìŠ¤íŠ¸
-            - mode: "ìžë™", "ìˆ˜ë™", "ë°˜ìžë™"
-            - numbers: ë²ˆí˜¸ ë¦¬ìŠ¤íŠ¸ (ìˆ˜ë™/ë°˜ìžë™ì¼ ë•Œë§Œ)
+        games: Game list
+            - mode: "Auto", "Manual", "Semi-Auto"
+            - numbers: Number list (required for Manual/Semi-Auto)
     
     Example:
         [
-            {"mode": "ìžë™"},
-            {"mode": "ìˆ˜ë™", "numbers": [1, 7, 12, 23, 34, 41]},
-            {"mode": "ë°˜ìžë™", "numbers": [3, 9, 15]}
+            {"mode": "Auto"},
+            {"mode": "Manual", "numbers": [1, 7, 12, 23, 34, 41]},
+            {"mode": "Semi-Auto", "numbers": [3, 9, 15]}
         ]
     """
     if not lotto_645:
@@ -544,23 +544,35 @@ async def buy_lotto(games: list[dict]):
         raise HTTPException(status_code=400, detail="Maximum 5 games allowed")
     
     try:
-        # ê²Œìž„ ìŠ¬ë¡¯ ìƒì„±
-        from dh_lotto_645 import DhLotto645
+        # Create game slots
+        from dh_lotto_645 import DhLotto645, DhLotto645SelMode
+        
+        # Mode mapping (Korean to English)
+        mode_map = {
+            "Auto": DhLotto645SelMode.AUTO,
+            "자동": DhLotto645SelMode.AUTO,
+            "Manual": DhLotto645SelMode.MANUAL,
+            "수동": DhLotto645SelMode.MANUAL,
+            "Semi-Auto": DhLotto645SelMode.SEMI_AUTO,
+            "반자동": DhLotto645SelMode.SEMI_AUTO,
+        }
         
         slots = []
         for i, game in enumerate(games):
-            mode_str = game.get("mode", "ìžë™")
+            mode_str = game.get("mode", "Auto")
             numbers = game.get("numbers", [])
             
-            # ëª¨ë“œ ê²€ì¦
-            if mode_str not in ["ìžë™", "ìˆ˜ë™", "ë°˜ìžë™"]:
+            # Mode validation
+            if mode_str not in mode_map:
                 raise HTTPException(
                     status_code=400, 
-                    detail=f"Game {i+1}: Invalid mode '{mode_str}'. Must be 'ìžë™', 'ìˆ˜ë™', or 'ë°˜ìžë™'"
+                    detail=f"Game {i+1}: Invalid mode '{mode_str}'. Must be 'Auto', 'Manual', or 'Semi-Auto'"
                 )
             
-            # ë²ˆí˜¸ ê²€ì¦ (ìˆ˜ë™/ë°˜ìžë™)
-            if mode_str in ["ìˆ˜ë™", "ë°˜ìžë™"]:
+            mode = mode_map[mode_str]
+            
+            # Number validation (Manual/Semi-Auto)
+            if mode in [DhLotto645SelMode.MANUAL, DhLotto645SelMode.SEMI_AUTO]:
                 if not numbers:
                     raise HTTPException(
                         status_code=400,
@@ -577,21 +589,14 @@ async def buy_lotto(games: list[dict]):
                         detail=f"Game {i+1}: Numbers must be between 1 and 45"
                     )
             
-            # ìŠ¬ë¡¯ ì¶”ê°€
-            from dh_lotto_645 import DhLotto645SelMode
-            
-            if mode_str == "ìžë™":
-                slots.append(DhLotto645.Slot(mode=DhLotto645SelMode.AUTO))
-            elif mode_str == "ìˆ˜ë™":
-                slots.append(DhLotto645.Slot(mode=DhLotto645SelMode.MANUAL, numbers=numbers))
-            else:  # ë°˜ìžë™
-                slots.append(DhLotto645.Slot(mode=DhLotto645SelMode.SEMI_AUTO, numbers=numbers))
+            # Add slot
+            slots.append(DhLotto645.Slot(mode=mode, numbers=numbers))
         
-        # êµ¬ë§¤ ì‹¤í–‰
+        # Purchase
         logger.info(f"Purchasing {len(slots)} games...")
         result = await lotto_645.async_buy(slots)
         
-        # ê²°ê³¼ ë°˜í™˜
+        # Return result
         response = {
             "success": True,
             "round_no": result.round_no,
@@ -619,21 +624,21 @@ async def buy_lotto(games: list[dict]):
 
 @app.post("/buy/auto")
 async def buy_lotto_auto(count: int = 1):
-    """ë¡œë˜ 6/45 ìžë™ êµ¬ë§¤
+    """Buy Lotto 6/45 Auto
     
     Args:
-        count: êµ¬ë§¤í•  ê²Œìž„ ìˆ˜ (1-5)
+        count: Number of games to purchase (1-5)
     """
     if count < 1 or count > 5:
         raise HTTPException(status_code=400, detail="Count must be between 1 and 5")
     
-    games = [{"mode": "ìžë™"} for _ in range(count)]
+    games = [{"mode": "Auto"} for _ in range(count)]
     return await buy_lotto(games)
 
 
 @app.get("/buy/history")
 async def get_buy_history():
-    """ìµœê·¼ 1ì£¼ì¼ êµ¬ë§¤ ë‚´ì—­ ì¡°íšŒ"""
+    """Get purchase history from last week"""
     if not lotto_645:
         raise HTTPException(status_code=400, detail="Lotto 645 not enabled")
     
