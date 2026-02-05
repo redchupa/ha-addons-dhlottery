@@ -16,7 +16,6 @@ import uvicorn
 
 from dh_lottery_client import DhLotteryClient
 from dh_lotto_645 import DhLotto645
-from dh_lotto_645_ext import get_lotto645_winning_details
 from dh_lotto_analyzer import DhLottoAnalyzer
 from mqtt_discovery import MQTTDiscovery, publish_sensor_mqtt
 
@@ -651,12 +650,18 @@ async def update_sensors():
         if config["enable_lotto645"] and analyzer:
             # Get lotto results
             try:
-                # Get raw data to check all available fields
+                # Get raw data with all prize information
                 params = {
                     "_": int(datetime.now().timestamp() * 1000),
                 }
                 raw_data = await client.async_get('lt645/selectPstLt645Info.do', params)
-                logger.info(f"[DEBUG] Raw API response: {raw_data}")
+                
+                # Extract first item
+                items = raw_data.get('list', [])
+                if not items:
+                    raise Exception("No lotto data available")
+                
+                item = items[0]
                 
                 latest_round_info = await lotto_645.async_get_round_info()
                 lotto_result = {
@@ -674,49 +679,49 @@ async def update_sensors():
                 }
                 
                 # Lotto result sensors
-                item = _get_lotto645_item(lotto_result)
+                result_item = _get_lotto645_item(lotto_result)
                 
                 # Round number
-                await publish_sensor("lotto645_round", _safe_int(item.get("ltEpsd")), {
+                await publish_sensor("lotto645_round", _safe_int(result_item.get("ltEpsd")), {
                     "friendly_name": "Lotto 645 Round",
                     "icon": "mdi:counter",
                 })
                 
                 # Numbers 1-6
                 for i in range(1, 7):
-                    await publish_sensor(f"lotto645_number{i}", _safe_int(item.get(f"tm{i}WnNo")), {
+                    await publish_sensor(f"lotto645_number{i}", _safe_int(result_item.get(f"tm{i}WnNo")), {
                         "friendly_name": f"Lotto 645 Number {i}",
                         "icon": f"mdi:numeric-{i}-circle",
                     })
                 
                 # Bonus number
-                await publish_sensor("lotto645_bonus", _safe_int(item.get("bnsWnNo")), {
+                await publish_sensor("lotto645_bonus", _safe_int(result_item.get("bnsWnNo")), {
                     "friendly_name": "Lotto 645 Bonus",
                     "icon": "mdi:star-circle",
                 })
                 
                 # Winning numbers combined (all 6 numbers + bonus)
                 winning_numbers = [
-                    _safe_int(item.get("tm1WnNo")),
-                    _safe_int(item.get("tm2WnNo")),
-                    _safe_int(item.get("tm3WnNo")),
-                    _safe_int(item.get("tm4WnNo")),
-                    _safe_int(item.get("tm5WnNo")),
-                    _safe_int(item.get("tm6WnNo")),
+                    _safe_int(result_item.get("tm1WnNo")),
+                    _safe_int(result_item.get("tm2WnNo")),
+                    _safe_int(result_item.get("tm3WnNo")),
+                    _safe_int(result_item.get("tm4WnNo")),
+                    _safe_int(result_item.get("tm5WnNo")),
+                    _safe_int(result_item.get("tm6WnNo")),
                 ]
-                bonus_number = _safe_int(item.get("bnsWnNo"))
+                bonus_number = _safe_int(result_item.get("bnsWnNo"))
                 winning_text = f"{', '.join(map(str, winning_numbers))} + {bonus_number}"
                 
                 await publish_sensor("lotto645_winning_numbers", winning_text, {
                     "numbers": winning_numbers,
                     "bonus": bonus_number,
-                    "round": _safe_int(item.get("ltEpsd")),
+                    "round": _safe_int(result_item.get("ltEpsd")),
                     "friendly_name": "Lotto 645 Winning Numbers",
                     "icon": "mdi:trophy-award",
                 })
                 
                 # Draw date
-                draw_date = _parse_yyyymmdd(item.get("ltRflYmd"))
+                draw_date = _parse_yyyymmdd(result_item.get("ltRflYmd"))
                 if draw_date:
                     await publish_sensor("lotto645_draw_date", draw_date, {
                         "friendly_name": "Lotto 645 Draw Date",
@@ -724,68 +729,95 @@ async def update_sensors():
                         "device_class": "date",
                     })
                 
-                # ========== Prize Details from Public API ==========
-                try:
-                    prize_details = await get_lotto645_winning_details(client, latest_round_info.round_no)
-                    
-                    # Total sales
-                    await publish_sensor("lotto645_total_sales", prize_details.total_sales, {
-                        "friendly_name": "Lotto 645 Total Sales",
-                        "unit_of_measurement": "KRW",
-                        "icon": "mdi:cash-multiple",
-                    })
-                    
-                    # 1st prize
-                    await publish_sensor("lotto645_first_prize", prize_details.first_prize_amount, {
-                        "friendly_name": "Lotto 645 1st Prize",
-                        "unit_of_measurement": "KRW",
-                        "total_amount": prize_details.first_prize_total,
-                        "winners": prize_details.first_prize_winners,
-                        "icon": "mdi:trophy",
-                    })
-                    
-                    await publish_sensor("lotto645_first_winners", prize_details.first_prize_winners, {
-                        "friendly_name": "Lotto 645 1st Winners",
-                        "unit_of_measurement": "people",
-                        "icon": "mdi:account-multiple",
-                    })
-                    
-                    # 2nd-5th prize (if available)
-                    if prize_details.second_prize_amount:
-                        await publish_sensor("lotto645_second_prize", prize_details.second_prize_amount, {
-                            "friendly_name": "Lotto 645 2nd Prize",
-                            "unit_of_measurement": "KRW",
-                            "winners": prize_details.second_prize_winners,
-                            "icon": "mdi:medal",
-                        })
-                    
-                    if prize_details.third_prize_amount:
-                        await publish_sensor("lotto645_third_prize", prize_details.third_prize_amount, {
-                            "friendly_name": "Lotto 645 3rd Prize",
-                            "unit_of_measurement": "KRW",
-                            "winners": prize_details.third_prize_winners,
-                            "icon": "mdi:medal-outline",
-                        })
-                    
-                    if prize_details.fourth_prize_amount:
-                        await publish_sensor("lotto645_fourth_prize", prize_details.fourth_prize_amount, {
-                            "friendly_name": "Lotto 645 4th Prize",
-                            "unit_of_measurement": "KRW",
-                            "winners": prize_details.fourth_prize_winners,
-                            "icon": "mdi:currency-krw",
-                        })
-                    
-                    if prize_details.fifth_prize_amount:
-                        await publish_sensor("lotto645_fifth_prize", prize_details.fifth_prize_amount, {
-                            "friendly_name": "Lotto 645 5th Prize",
-                            "unit_of_measurement": "KRW",
-                            "winners": prize_details.fifth_prize_winners,
-                            "icon": "mdi:cash",
-                        })
-                    
-                except Exception:
-                    # Silently ignore - API may be temporarily unavailable or blocked
-                    pass
+                # ========== Prize Details from Internal API ==========
+                # Total sales
+                await publish_sensor("lotto645_total_sales", _safe_int(item.get("wholEpsdSumNtslAmt")), {
+                    "friendly_name": "Lotto 645 Total Sales",
+                    "unit_of_measurement": "KRW",
+                    "icon": "mdi:cash-multiple",
+                })
+                
+                # 1st prize
+                await publish_sensor("lotto645_first_prize", _safe_int(item.get("rnk1WnAmt")), {
+                    "friendly_name": "Lotto 645 1st Prize",
+                    "unit_of_measurement": "KRW",
+                    "total_amount": _safe_int(item.get("rnk1SumWnAmt")),
+                    "winners": _safe_int(item.get("rnk1WnNope")),
+                    "icon": "mdi:trophy",
+                })
+                
+                await publish_sensor("lotto645_first_winners", _safe_int(item.get("rnk1WnNope")), {
+                    "friendly_name": "Lotto 645 1st Winners",
+                    "unit_of_measurement": "people",
+                    "icon": "mdi:account-multiple",
+                })
+                
+                # 2nd prize
+                await publish_sensor("lotto645_second_prize", _safe_int(item.get("rnk2WnAmt")), {
+                    "friendly_name": "Lotto 645 2nd Prize",
+                    "unit_of_measurement": "KRW",
+                    "total_amount": _safe_int(item.get("rnk2SumWnAmt")),
+                    "winners": _safe_int(item.get("rnk2WnNope")),
+                    "icon": "mdi:medal",
+                })
+                
+                await publish_sensor("lotto645_second_winners", _safe_int(item.get("rnk2WnNope")), {
+                    "friendly_name": "Lotto 645 2nd Winners",
+                    "unit_of_measurement": "people",
+                    "icon": "mdi:account-multiple-outline",
+                })
+                
+                # 3rd prize
+                await publish_sensor("lotto645_third_prize", _safe_int(item.get("rnk3WnAmt")), {
+                    "friendly_name": "Lotto 645 3rd Prize",
+                    "unit_of_measurement": "KRW",
+                    "total_amount": _safe_int(item.get("rnk3SumWnAmt")),
+                    "winners": _safe_int(item.get("rnk3WnNope")),
+                    "icon": "mdi:medal-outline",
+                })
+                
+                await publish_sensor("lotto645_third_winners", _safe_int(item.get("rnk3WnNope")), {
+                    "friendly_name": "Lotto 645 3rd Winners",
+                    "unit_of_measurement": "people",
+                    "icon": "mdi:account-group-outline",
+                })
+                
+                # 4th prize
+                await publish_sensor("lotto645_fourth_prize", _safe_int(item.get("rnk4WnAmt")), {
+                    "friendly_name": "Lotto 645 4th Prize",
+                    "unit_of_measurement": "KRW",
+                    "total_amount": _safe_int(item.get("rnk4SumWnAmt")),
+                    "winners": _safe_int(item.get("rnk4WnNope")),
+                    "icon": "mdi:currency-krw",
+                })
+                
+                await publish_sensor("lotto645_fourth_winners", _safe_int(item.get("rnk4WnNope")), {
+                    "friendly_name": "Lotto 645 4th Winners",
+                    "unit_of_measurement": "people",
+                    "icon": "mdi:account-group",
+                })
+                
+                # 5th prize
+                await publish_sensor("lotto645_fifth_prize", _safe_int(item.get("rnk5WnAmt")), {
+                    "friendly_name": "Lotto 645 5th Prize",
+                    "unit_of_measurement": "KRW",
+                    "total_amount": _safe_int(item.get("rnk5SumWnAmt")),
+                    "winners": _safe_int(item.get("rnk5WnNope")),
+                    "icon": "mdi:cash",
+                })
+                
+                await publish_sensor("lotto645_fifth_winners", _safe_int(item.get("rnk5WnNope")), {
+                    "friendly_name": "Lotto 645 5th Winners",
+                    "unit_of_measurement": "people",
+                    "icon": "mdi:account",
+                })
+                
+                # Total winners
+                await publish_sensor("lotto645_total_winners", _safe_int(item.get("sumWnNope")), {
+                    "friendly_name": "Lotto 645 Total Winners",
+                    "unit_of_measurement": "people",
+                    "icon": "mdi:account-group",
+                })
                 
             except Exception as e:
                 logger.warning(f"Failed to fetch lotto results: {e}")
