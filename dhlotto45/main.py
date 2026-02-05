@@ -651,6 +651,13 @@ async def update_sensors():
         if config["enable_lotto645"] and analyzer:
             # Get lotto results
             try:
+                # Get raw data to check all available fields
+                params = {
+                    "_": int(datetime.now().timestamp() * 1000),
+                }
+                raw_data = await client.async_get('lt645/selectPstLt645Info.do', params)
+                logger.info(f"[DEBUG] Raw API response: {raw_data}")
+                
                 latest_round_info = await lotto_645.async_get_round_info()
                 lotto_result = {
                     "_raw": {
