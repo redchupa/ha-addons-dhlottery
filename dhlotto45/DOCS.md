@@ -51,7 +51,7 @@ mqtt_password: ""  # MQTT 비밀번호 (선택사항)
 애드온을 시작하면 다음 센서들이 자동으로 생성됩니다.
 
 <details>
-<summary><b>📊 1. 계정 정보 센서</b></summary>
+<summary><b>1. 계정 정보 센서</b></summary>
 
 ### 동행복권 예치금
 - **센서 ID**: `sensor.dhlotto_{username}_lotto45_balance`
@@ -68,7 +68,7 @@ mqtt_password: ""  # MQTT 비밀번호 (선택사항)
 </details>
 
 <details>
-<summary><b>🎱 2. 로또 당첨 결과 센서</b></summary>
+<summary><b>2. 로또 당첨 결과 센서</b></summary>
 
 ### 기본 정보
 - `sensor.dhlotto_{username}_lotto645_round` - 로또 645 회차 (최신 회차 번호)
@@ -88,7 +88,7 @@ mqtt_password: ""  # MQTT 비밀번호 (선택사항)
 </details>
 
 <details>
-<summary><b>💰 3. 상금 및 당첨자 정보 센서</b></summary>
+<summary><b>3. 상금 및 당첨자 정보 센서</b></summary>
 
 ### 총 판매액
 - `sensor.dhlotto_{username}_lotto645_total_sales` - 로또 645 총 판매액 (해당 회차 총 판매액, KRW)
@@ -119,7 +119,7 @@ mqtt_password: ""  # MQTT 비밀번호 (선택사항)
 </details>
 
 <details>
-<summary><b>📈 4. 번호 통계 분석 센서</b></summary>
+<summary><b>4. 번호 통계 분석 센서</b></summary>
 
 ### 통계 센서
 - `sensor.dhlotto_{username}_lotto45_top_frequency_number` - 로또 45 최다 출현 번호 (최근 50회차 중 가장 많이 나온 번호, 회)
@@ -138,7 +138,7 @@ mqtt_password: ""  # MQTT 비밀번호 (선택사항)
 </details>
 
 <details>
-<summary><b>🎫 5. 구매 내역 센서</b></summary>
+<summary><b>5. 구매 내역 센서</b></summary>
 
 ### 구매 정보
 - `sensor.dhlotto_{username}_lotto45_latest_purchase` - 최근 구매 (가장 최근 구매 정보)
@@ -168,7 +168,7 @@ mqtt_password: ""  # MQTT 비밀번호 (선택사항)
 </details>
 
 <details>
-<summary><b>⚙️ 6. 시스템 센서</b></summary>
+<summary><b>6. 시스템 센서</b></summary>
 
 - `sensor.dhlotto_{username}_lotto45_last_update` - 마지막 업데이트 (센서 마지막 업데이트 시간)
 
@@ -422,7 +422,7 @@ cards:
 **베이스 URL:** `http://homeassistant.local:60099`
 
 <details>
-<summary><b>📡 API 엔드포인트</b></summary>
+<summary><b>API 엔드포인트</b></summary>
 
 ### 조회 API (GET)
 - `/health` - 상태 확인
