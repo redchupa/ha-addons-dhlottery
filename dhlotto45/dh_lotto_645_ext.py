@@ -67,17 +67,30 @@ async def get_lotto645_winning_details(client, round_no: Optional[int] = None) -
         params["drwNo"] = round_no
     
     try:
-        # Use authenticated session from client
-        async with client.session.get(PUBLIC_API_URL, params=params, timeout=10) as resp:
+        # Use authenticated session with AJAX headers
+        headers = {
+            "X-Requested-With": "XMLHttpRequest",
+            "Accept": "application/json, text/javascript, */*; q=0.01",
+            "Referer": "https://www.dhlottery.co.kr/gameResult.do?method=byWin",
+        }
+        
+        async with client.session.get(
+            PUBLIC_API_URL, 
+            params=params, 
+            headers=headers,
+            timeout=10,
+            allow_redirects=False
+        ) as resp:
             if resp.status != 200:
                 raise Exception(f"API request failed: {resp.status}")
             
-            # Try to parse as JSON
-            try:
-                data = await resp.json()
-            except Exception:
-                # API returned non-JSON (probably HTML redirect or blocking)
-                raise Exception(f"API returned non-JSON response (status: {resp.status})")
+            # Check content type
+            content_type = resp.headers.get('Content-Type', '')
+            if 'application/json' not in content_type:
+                raise Exception(f"API returned HTML instead of JSON (Content-Type: {content_type})")
+            
+            # Parse JSON
+            data = await resp.json()
             
             if data.get("returnValue") != "success":
                 raise Exception(f"API error: {data.get('returnValue', 'unknown')}")
