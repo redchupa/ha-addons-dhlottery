@@ -27,12 +27,53 @@
 
 ### use_mqtt
 - **타입**: 불리언
-- **설명**: MQTT 사용 (현재 미구현)
+- **설명**: MQTT Discovery 사용 여부
 - **기본값**: `false`
+- **권장**: `true` (unique_id 지원)
+- **효과**:
+  - `true`: MQTT Discovery 사용 → unique_id 있음, UI에서 엔티티 수정 가능
+  - `false`: REST API 사용 → unique_id 없음, 이름 변경 불가
+
+### mqtt_broker
+- **타입**: 문자열
+- **설명**: MQTT 브로커 주소
+- **기본값**: `"homeassistant.local"`
+- **예시**: `"192.168.1.100"`, `"homeassistant.local"`
+- **주의**: `use_mqtt: true`일 때만 사용
+
+### mqtt_port
+- **타입**: 정수
+- **설명**: MQTT 브로커 포트
+- **기본값**: `1883`
+- **주의**: `use_mqtt: true`일 때만 사용
+
+### mqtt_username
+- **타입**: 문자열
+- **설명**: MQTT 사용자명 (선택)
+- **기본값**: `""`
+- **주의**: MQTT 브로커에 인증이 필요한 경우 입력
+
+### mqtt_password
+- **타입**: 비밀번호
+- **설명**: MQTT 비밀번호 (선택)
+- **기본값**: `""`
+- **주의**: MQTT 브로커에 인증이 필요한 경우 입력
 
 ## 센서 상세
 
-### sensor.lotto45_deposit
+**센서 이름 규칙:**
+- **REST API 모드** (`use_mqtt: false`): `sensor.addon_[USERNAME]_lotto45_*`
+  - 예: `sensor.addon_ng410808_lotto45_balance`
+  - ⚠️ unique_id 없음 (UI에서 이름 변경 불가)
+  
+- **MQTT 모드** (`use_mqtt: true`): `sensor.dhlottery_addon_[USERNAME]_lotto45_*`
+  - 예: `sensor.dhlottery_addon_ng410808_lotto45_balance`
+  - ✅ unique_id 있음 (UI에서 자유롭게 수정 가능)
+  - ✅ 디바이스로 자동 그룹화
+
+아래 센서 설명에서 `[USERNAME]`은 실제 동행복권 아이디로 치환됩니다.
+
+### sensor.[MODE]_lotto45_balance
 
 예치금 정보를 제공합니다.
 
@@ -398,6 +439,139 @@ automation:
 - 애드온 설정의 비밀번호는 암호화되지 않습니다
 - 로그에 민감한 정보가 기록될 수 있습니다
 - API 키나 토큰을 공유하지 마세요
+
+## MQTT Discovery
+
+### MQTT vs REST API
+
+| 기능 | REST API 모드 | MQTT 모드 |
+|------|---------------|-----------|
+| unique_id | ❌ 없음 | ✅ 있음 |
+| UI 수정 | ❌ 불가능 | ✅ 가능 |
+| Entity ID | `addon_[USER]_*` | `dhlottery_addon_[USER]_*` |
+| 디바이스 그룹화 | ❌ 없음 | ✅ 자동 |
+| 설정 난이도 | ⭐ 쉬움 | ⭐⭐ 보통 |
+
+**권장**: MQTT 모드 사용
+
+### MQTT 설정 방법
+
+**1단계: Mosquitto 브로커 설치** (아직 설치 안 한 경우)
+
+```
+1. Settings > Add-ons > Add-on Store
+2. "Mosquitto broker" 검색
+3. Install 클릭
+4. Start 클릭
+5. "Start on boot" 활성화
+```
+
+**2단계: DH Lotto 45 애드온 설정**
+
+```yaml
+username: "your_id"
+password: "your_password"
+enable_lotto645: true
+update_interval: 3600
+use_mqtt: true                          # MQTT 활성화
+mqtt_broker: "homeassistant.local"      # 기본값 사용
+mqtt_port: 1883                         # 기본값 사용
+```
+
+**3단계: 애드온 재시작**
+
+```
+Info 탭 > Restart 버튼 클릭
+```
+
+**4단계: 센서 확인**
+
+```
+Developer Tools > States > "dhlottery_addon" 검색
+```
+
+### MQTT 인증이 필요한 경우
+
+Mosquitto 브로커에 사용자 인증이 설정된 경우:
+
+```yaml
+use_mqtt: true
+mqtt_broker: "homeassistant.local"
+mqtt_port: 1883
+mqtt_username: "your_mqtt_user"
+mqtt_password: "your_mqtt_pass"
+```
+
+### MQTT 문제 해결
+
+**증상**: "MQTT connection failed" 로그 메시지
+
+**원인 1**: Mosquitto 브로커가 실행 중이 아님
+```
+해결: Settings > Add-ons > Mosquitto broker > Start
+```
+
+**원인 2**: 잘못된 브로커 주소/포트
+```
+해결: Configuration에서 mqtt_broker, mqtt_port 확인
+```
+
+**원인 3**: 인증 오류
+```
+해결: mqtt_username, mqtt_password 확인
+```
+
+**원인 4**: MQTT Discovery 비활성화됨
+```
+해결: Settings > Devices & Services > MQTT > Configure > 
+      "Enable discovery" 체크박스 활성화
+```
+
+### unique_id 활용
+
+MQTT 모드에서는 모든 센서에 unique_id가 있어 다음이 가능합니다:
+
+**1. 엔티티 이름 변경**
+```
+Settings > Devices & Services > Entities > 
+센서 선택 > Name 필드 수정
+```
+
+**2. 아이콘 변경**
+```
+Settings > Devices & Services > Entities > 
+센서 선택 > Icon 필드 수정
+```
+
+**3. 디바이스 페이지에서 관리**
+```
+Settings > Devices & Services > MQTT > 
+"DH Lottery Add-on ([USERNAME])" 디바이스 클릭
+```
+
+### 엔티티 ID 비교
+
+**REST API 모드:**
+```
+sensor.addon_ng410808_lotto45_balance
+sensor.addon_ng410808_lotto45_hot_numbers
+sensor.addon_ng410808_lotto645_round
+```
+
+**MQTT 모드:**
+```
+sensor.dhlottery_addon_ng410808_lotto45_balance
+sensor.dhlottery_addon_ng410808_lotto45_hot_numbers
+sensor.dhlottery_addon_ng410808_lotto645_round
+```
+
+**통합구성요소 (custom_components):**
+```
+sensor.dhlottery_ng410808_deposit
+button.dhlottery_ng410808_lotto_645_buy_1
+```
+
+→ **충돌 없음**: 세 가지 모두 동시 사용 가능!
 
 ## 지원
 

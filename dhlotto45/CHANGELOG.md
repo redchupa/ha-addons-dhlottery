@@ -1,5 +1,37 @@
 # 변경 이력
 
+## [0.4.7] - 2026-02-05
+
+### 🆕 추가
+- **MQTT Discovery 지원** (중요!)
+  - 모든 센서에 unique_id 추가
+  - UI에서 엔티티 이름/아이콘 자유롭게 변경 가능
+  - 자동 디바이스 등록 및 그룹화
+  - 통합구성요소와 완전히 분리된 entity_id
+  
+### 설정 옵션 추가
+- `use_mqtt`: MQTT Discovery 사용 여부 (기본값: false)
+- `mqtt_broker`: MQTT 브로커 주소 (기본값: homeassistant.local)
+- `mqtt_port`: MQTT 포트 (기본값: 1883)
+- `mqtt_username`: MQTT 사용자명 (선택)
+- `mqtt_password`: MQTT 비밀번호 (선택)
+
+### 변경
+- Entity ID 네이밍 개선
+  - REST API 모드: `sensor.addon_[USERNAME]_lotto45_*`
+  - MQTT 모드: `sensor.dhlottery_addon_[USERNAME]_lotto45_*`
+- `publish_sensor` 함수: MQTT/REST API 자동 선택
+- 한글 주석/로그 메시지 → 영어로 변경
+
+### 기술
+- 새 파일: `mqtt_discovery.py` (MQTT Discovery 헬퍼 모듈)
+- `paho-mqtt` 라이브러리 활용
+- Fallback 메커니즘: MQTT 실패 시 자동으로 REST API 사용
+
+### 문서
+- README.md 업데이트: MQTT 사용법 추가
+- API 문서 페이지 개선 (Ingress 친화적)
+
 ## [0.4.6] - 2026-02-05
 
 ### 수정
@@ -17,7 +49,7 @@
 - "로또45 Hot 번호" → "Lotto 45 Hot Numbers"
 - "로또45 Cold 번호" → "Lotto 45 Cold Numbers"
 - "로또45 최다 출현 번호" → "Lotto 45 Top Frequency Number"
-- "로또45 이 당첨금" → "Lotto 45 Total Winning"
+- "로또45 총 당첨금" → "Lotto 45 Total Winning"
 - "최근 업데이트" → "Last Update"
 
 ## [0.4.5] - 2026-02-05
@@ -117,7 +149,7 @@
 
 ## 향후 계획
 
-- MQTT Discovery 지원
+- ~~MQTT Discovery 지원~~ ✅ (v0.4.7)
 - 자동 구매 기능
 - 당첨 알림 (Push notification)
 - 구매 내역 상세 조회

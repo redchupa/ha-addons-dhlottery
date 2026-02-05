@@ -16,6 +16,7 @@ import uvicorn
 from dh_lottery_client import DhLotteryClient
 from dh_lotto_645 import DhLotto645
 from dh_lotto_analyzer import DhLottoAnalyzer
+from mqtt_discovery import MQTTDiscovery, publish_sensor_mqtt
 
 # Logging setup
 logging.basicConfig(
@@ -38,6 +39,7 @@ config = {
 client: Optional[DhLotteryClient] = None
 lotto_645: Optional[DhLotto645] = None
 analyzer: Optional[DhLottoAnalyzer] = None
+mqtt_client: Optional[MQTTDiscovery] = None
 
 
 # ============================================================================
@@ -97,7 +99,7 @@ def _get_lotto645_item(data: dict) -> dict:
 
 async def init_client():
     """Initialize client"""
-    global client, lotto_645, analyzer
+    global client, lotto_645, analyzer, mqtt_client
     
     if not config["username"] or not config["password"]:
         logger.error("Username or password not configured")
@@ -112,6 +114,21 @@ async def init_client():
             lotto_645 = DhLotto645(client)
             analyzer = DhLottoAnalyzer(client)
         
+        # Initialize MQTT if enabled
+        if config["use_mqtt"]:
+            logger.info("Initializing MQTT Discovery...")
+            mqtt_client = MQTTDiscovery(
+                broker=os.getenv("MQTT_BROKER", "homeassistant.local"),
+                port=int(os.getenv("MQTT_PORT", "1883")),
+                username=os.getenv("MQTT_USERNAME"),
+                password=os.getenv("MQTT_PASSWORD"),
+            )
+            if mqtt_client.connect():
+                logger.info("MQTT Discovery initialized successfully")
+            else:
+                logger.warning("MQTT connection failed, falling back to REST API")
+                mqtt_client = None
+        
         logger.info("Client initialized successfully")
         return True
     except Exception as e:
@@ -121,7 +138,15 @@ async def init_client():
 
 async def cleanup_client():
     """Clean up client"""
-    global client
+    global client, mqtt_client
+    
+    if mqtt_client:
+        try:
+            mqtt_client.disconnect()
+            logger.info("MQTT client disconnected")
+        except Exception as e:
+            logger.error(f"Error disconnecting MQTT client: {e}")
+    
     if client:
         try:
             await client.close()
@@ -166,6 +191,203 @@ app = FastAPI(
     version="2.0.0",
     lifespan=lifespan
 )
+
+
+@app.get("/api-docs", response_class=HTMLResponse)
+async def custom_docs():
+    """Custom API documentation page for Ingress mode"""
+    return """
+    <!DOCTYPE html>
+    <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>API Documentation - Lotto 45</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+                h1 { color: #333; }
+                .endpoint { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+                .method { display: inline-block; padding: 3px 8px; border-radius: 3px; font-weight: bold; color: white; margin-right: 10px; }
+                .get { background: #61affe; }
+                .post { background: #49cc90; }
+                code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-family: monospace; }
+                pre { background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; font-size: 13px; }
+                .note { background: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin: 20px 0; }
+            </style>
+        </head>
+        <body>
+            <h1>📚 API Documentation</h1>
+            
+            <div class="note">
+                <strong>💡 Tip:</strong> For full interactive Swagger UI, access directly via port:<br>
+                <code>http://homeassistant.local:60099/docs</code>
+            </div>
+            
+            <h2>Available Endpoints</h2>
+            
+            <div class="endpoint">
+                <span class="method get">GET</span> <strong>/health</strong>
+                <p>Health check endpoint - returns system status</p>
+                <pre>Response:
+{
+  "status": "ok",
+  "logged_in": true,
+  "username": "your_id",
+  "lotto645_enabled": true,
+  "version": "2.0.0"
+}</pre>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method get">GET</span> <strong>/balance</strong>
+                <p>Get account balance information</p>
+                <pre>Response:
+{
+  "deposit": 100000,
+  "purchase_available": 95000,
+  "reservation_purchase": 0,
+  "withdrawal_request": 5000,
+  "purchase_impossible": 5000,
+  "this_month_accumulated_purchase": 50000
+}</pre>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method get">GET</span> <strong>/stats</strong>
+                <p>Get lottery statistics (frequency analysis, hot/cold numbers, purchase stats)</p>
+                <pre>Response:
+{
+  "frequency": [
+    {"number": 16, "count": 11, "percentage": 22.0},
+    ...
+  ],
+  "hot_numbers": [16, 1, 24, 27, 3, ...],
+  "cold_numbers": [11, 13, 18, 21, 22, ...],
+  "purchase_stats": {
+    "total_purchase_count": 100,
+    "total_winning_amount": 50000,
+    "win_rate": 10.0,
+    "roi": -50.0
+  }
+}</pre>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method post">POST</span> <strong>/random?count=6&games=1</strong>
+                <p>Generate random lottery numbers</p>
+                <p><strong>Parameters:</strong></p>
+                <ul>
+                    <li><code>count</code> - Number of numbers to generate (1-45, default: 6)</li>
+                    <li><code>games</code> - Number of games (1-5, default: 1)</li>
+                </ul>
+                <pre>Response:
+{
+  "numbers": [
+    [1, 5, 12, 23, 34, 42],
+    [3, 8, 15, 27, 33, 41]
+  ]
+}</pre>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method post">POST</span> <strong>/check</strong>
+                <p>Check if your numbers won</p>
+                <pre>Request Body:
+{
+  "numbers": [1, 2, 3, 4, 5, 6],
+  "round_no": 1000  // optional, defaults to latest
+}
+
+Response:
+{
+  "round_no": 1000,
+  "my_numbers": [1, 2, 3, 4, 5, 6],
+  "winning_numbers": [7, 8, 9, 10, 11, 12],
+  "bonus_number": 13,
+  "matching_count": 0,
+  "bonus_match": false,
+  "rank": 0,
+  "is_winner": false
+}</pre>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method post">POST</span> <strong>/buy</strong>
+                <p>Buy lottery tickets (1-5 games per purchase)</p>
+                <pre>Request Body:
+[
+  {"mode": "Auto"},
+  {"mode": "Manual", "numbers": [1, 7, 12, 23, 34, 41]},
+  {"mode": "Semi-Auto", "numbers": [3, 9, 15]}
+]
+
+Modes:
+- "Auto" (자동): System picks all 6 numbers
+- "Manual" (수동): You pick all 6 numbers
+- "Semi-Auto" (반자동): You pick some, system fills the rest
+
+Response:
+{
+  "success": true,
+  "round_no": 1122,
+  "barcode": "59865 36399 04155 63917 56431 42167",
+  "issue_dt": "2024/05/28 화 17:55:27",
+  "games": [...]
+}</pre>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method post">POST</span> <strong>/buy/auto?count=1</strong>
+                <p>Quick buy with auto-selected numbers</p>
+                <p><strong>Parameters:</strong></p>
+                <ul>
+                    <li><code>count</code> - Number of games to purchase (1-5)</li>
+                </ul>
+                <pre>Response: Same as /buy endpoint</pre>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method get">GET</span> <strong>/buy/history</strong>
+                <p>Get purchase history from the last week</p>
+                <pre>Response:
+{
+  "count": 2,
+  "items": [
+    {
+      "round_no": 1122,
+      "barcode": "...",
+      "result": "미추첨",
+      "games": [...]
+    }
+  ]
+}</pre>
+            </div>
+            
+            <h2>Testing with cURL</h2>
+            <p>Example cURL commands:</p>
+            <pre># Health check
+curl http://homeassistant.local:60099/health
+
+# Get balance
+curl http://homeassistant.local:60099/balance
+
+# Generate random numbers
+curl -X POST "http://homeassistant.local:60099/random?count=6&games=2"
+
+# Buy 3 auto tickets
+curl -X POST "http://homeassistant.local:60099/buy/auto?count=3"</pre>
+            
+            <h2>Access Full Swagger UI</h2>
+            <p>For interactive API testing with Swagger UI:</p>
+            <ol>
+                <li>Access the add-on directly via port 60099</li>
+                <li>Navigate to: <code>http://homeassistant.local:60099/docs</code></li>
+                <li>Or use your Home Assistant IP: <code>http://YOUR_HA_IP:60099/docs</code></li>
+            </ol>
+            
+            <p><a href=".">← Back to Home</a></p>
+        </body>
+    </html>
+    """
 
 
 async def background_tasks():
@@ -329,7 +551,34 @@ async def update_sensors():
         logger.error(f"Failed to update sensors: {e}", exc_info=True)
 
 async def publish_sensor(entity_id: str, state, attributes: dict = None):
-    """Publish sensor state (REST API)"""
+    """
+    Publish sensor state
+    Uses MQTT Discovery if use_mqtt=true, otherwise uses REST API
+    
+    Args:
+        entity_id: Sensor ID (e.g., 'lotto45_balance')
+        state: Sensor state value
+        attributes: Sensor attributes dictionary
+    """
+    # Try MQTT first if enabled
+    if config["use_mqtt"] and mqtt_client and mqtt_client.connected:
+        try:
+            success = await publish_sensor_mqtt(
+                mqtt_client=mqtt_client,
+                entity_id=entity_id,
+                state=state,
+                username=config["username"],
+                attributes=attributes
+            )
+            if success:
+                logger.debug(f"Published sensor via MQTT: {entity_id}")
+                return
+            else:
+                logger.warning(f"MQTT publish failed for {entity_id}, falling back to REST API")
+        except Exception as e:
+            logger.error(f"Error publishing sensor via MQTT: {e}")
+    
+    # Fallback to REST API
     import aiohttp
     
     if not config["supervisor_token"]:
@@ -337,7 +586,7 @@ async def publish_sensor(entity_id: str, state, attributes: dict = None):
         return
     
     # Add addon_ prefix to prevent conflicts with integration
-    addon_entity_id = f"addon_{entity_id}"
+    addon_entity_id = f"addon_{config['username']}_{entity_id}"
 
     url = f"{config['ha_url']}/api/states/sensor.{addon_entity_id}"
     headers = {
@@ -355,7 +604,7 @@ async def publish_sensor(entity_id: str, state, attributes: dict = None):
                 if resp.status not in [200, 201]:
                     logger.error(f"Failed to publish sensor {addon_entity_id}: {resp.status} - {await resp.text()}")
                 else:
-                    logger.debug(f"Published sensor {addon_entity_id}: {state}")
+                    logger.debug(f"Published sensor via REST API: {addon_entity_id}: {state}")
     except Exception as e:
         logger.error(f"Error publishing sensor {addon_entity_id}: {e}")
 
@@ -402,10 +651,12 @@ async def root():
             </ul>
             <h2>Links</h2>
             <ul>
-                <li><a href="docs">API Documentation</a></li>
+                <li><a href="api-docs">API Documentation</a> (Ingress-friendly)</li>
                 <li><a href="health">Health Check</a></li>
                 <li><a href="stats">Statistics</a></li>
             </ul>
+            <p><strong>💡 Advanced:</strong> For interactive Swagger UI, access directly via port 60099:<br>
+            <code>http://homeassistant.local:60099/docs</code></p>
         </body>
     </html>
     """
