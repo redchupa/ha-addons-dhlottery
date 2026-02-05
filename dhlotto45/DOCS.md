@@ -409,4 +409,4 @@ automation:
 4. 문제 발생 전 수행한 작업
 5. Configuration 설정 (비밀번호 제외)
 
-GitHub Issues: https://github.com/YOUR_USERNAME/ha-addons-dhlottery/issues
+GitHub Issues: https://github.com/redchupa/ha-addons-dhlottery/issues
