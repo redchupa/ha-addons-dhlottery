@@ -23,8 +23,8 @@ WORKDIR /app
 
 # requirements 복사 및 설치
 COPY requirements.txt .
-RUN python3 -m pip install --no-cache-dir --upgrade pip && \
-    python3 -m pip install --no-cache-dir -r requirements.txt
+RUN python3 -m pip install --no-cache-dir --break-system-packages --upgrade pip && \
+    python3 -m pip install --no-cache-dir --break-system-packages -r requirements.txt
 
 # 애플리케이션 복사
 COPY *.py ./
