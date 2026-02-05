@@ -302,7 +302,7 @@ class MQTTDiscovery:
                 "name": device_name,
                 "manufacturer": "DH Lottery",
                 "model": "Add-on",
-                "sw_version": "0.5.3",
+                "sw_version": "1.0.0",
             },
         }
         
