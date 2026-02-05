@@ -67,10 +67,27 @@ async def get_lotto645_winning_details(round_no: Optional[int] = None) -> Lotto6
         params["drwNo"] = round_no
     
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(PUBLIC_API_URL, params=params, ssl=False) as resp:
+        # Use proper headers to avoid redirects
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json, text/javascript, */*; q=0.01",
+            "Referer": "https://www.dhlottery.co.kr/",
+        }
+        
+        connector = aiohttp.TCPConnector(ssl=False)
+        async with aiohttp.ClientSession(connector=connector, headers=headers) as session:
+            async with session.get(PUBLIC_API_URL, params=params, allow_redirects=False) as resp:
+                _LOGGER.debug(f"Lotto 645 ext API response: {resp.status}, URL: {resp.url}")
+                
                 if resp.status != 200:
                     raise Exception(f"API request failed: {resp.status}")
+                
+                # Check content type
+                content_type = resp.headers.get('Content-Type', '')
+                if 'application/json' not in content_type and 'text/javascript' not in content_type:
+                    text = await resp.text()
+                    _LOGGER.error(f"Unexpected content type: {content_type}, response: {text[:200]}")
+                    raise Exception(f"API returned non-JSON response (Content-Type: {content_type})")
                 
                 data = await resp.json()
                 

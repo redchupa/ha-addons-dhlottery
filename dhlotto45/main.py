@@ -111,13 +111,13 @@ def _translate_result(result: str) -> str:
     
     # Korean to English mapping
     translations = {
-        "ë¯¸ì¶”ì²¨": "Pending",
-        "ë‚™ì²¨": "No Win",
-        "1ë“±": "1st Prize",
-        "2ë“±": "2nd Prize",
-        "3ë“±": "3rd Prize",
-        "4ë“±": "4th Prize",
-        "5ë“±": "5th Prize",
+        "Ã«Â¯Â¸Ã¬Â¶â€Ã¬Â²Â¨": "Pending",
+        "Ã«â€šâ„¢Ã¬Â²Â¨": "No Win",
+        "1Ã«â€œÂ±": "1st Prize",
+        "2Ã«â€œÂ±": "2nd Prize",
+        "3Ã«â€œÂ±": "3rd Prize",
+        "4Ã«â€œÂ±": "4th Prize",
+        "5Ã«â€œÂ±": "5th Prize",
     }
     
     for korean, english in translations.items():
@@ -810,7 +810,8 @@ async def update_sensors():
                                f"1st={prize_details.first_prize_amount:,} x {prize_details.first_prize_winners}")
                     
                 except Exception as e:
-                    logger.warning(f"Failed to fetch prize details: {e}")
+                    logger.warning(f"Failed to fetch prize details from public API: {e}")
+                    logger.debug("This is normal if the public API is temporarily unavailable")
                 
             except Exception as e:
                 logger.warning(f"Failed to fetch lotto results: {e}")
@@ -836,7 +837,7 @@ async def update_sensors():
                     # 1st prize amount (monthly pension)
                     await publish_sensor("lotto720_first_prize", pension_info.first_prize_amount, {
                         "friendly_name": "Pension Lottery 1st Prize",
-                        "unit_of_measurement": "만원/월",
+                        "unit_of_measurement": "ë§Œì›/ì›”",
                         "icon": "mdi:cash",
                         "note": "Monthly payment for 20 years",
                     })
@@ -855,6 +856,7 @@ async def update_sensors():
                     
                 except Exception as e:
                     logger.warning(f"Failed to fetch pension lottery results: {e}")
+                    logger.debug("Pension lottery API may require authentication or be temporarily unavailable")
             
             # Number frequency analysis
             try:

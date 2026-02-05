@@ -70,18 +70,26 @@ class DhLotto720:
             params["srchLtEpsd"] = round_no
         
         try:
-            data = await self.client.async_get('lt720/selectPstLt720Info.do', params)
+            # Try using logged-in session
+            _LOGGER.debug(f"Fetching pension lottery info for round: {round_no or 'latest'}")
+            
+            # Use async_get_with_login instead of async_get for pension lottery
+            # as it might require authentication
+            data = await self.client.async_get_with_login('lt720/selectPstLt720Info.do', params)
+            
             items = data.get('list', [])
             
             if not items or len(items) == 0:
+                _LOGGER.warning(f"No pension lottery data returned for round: {round_no}")
                 raise DhLotto720Error(f"Failed to get round info (round: {round_no})")
             
             item = items[0]
+            _LOGGER.debug(f"Pension lottery data received: {item}")
             
             # Extract winning number (format: group + 6 digits, e.g., "1234567")
             # The API returns winning number in format like "ltNo1WnNo"
-            group = item.get("ltNo1WnNo", "")  # Group number (1 digit)
-            win_no = item.get("tm1WnNo", "")   # Winning 6 digits
+            group = str(item.get("ltNo1WnNo", ""))  # Group number (1 digit)
+            win_no = str(item.get("tm1WnNo", ""))   # Winning 6 digits
             
             # Combine to 7-digit string
             first_prize_number = f"{group}{win_no}"
@@ -102,7 +110,10 @@ class DhLotto720:
                 bonus_number=item.get("bnsWnNo"),
             )
         
+        except DhLotto720Error:
+            raise
         except Exception as ex:
+            _LOGGER.error(f"Failed to get pension lottery info: {ex}", exc_info=True)
             raise DhLotto720Error(f"Failed to get pension lottery info: {ex}") from ex
     
     async def async_get_latest_round_no(self) -> int:
@@ -160,7 +171,7 @@ class DhLotto720:
                 [
                     item.get("prchsQty", 0)
                     for item in history_items
-                    if item.get("ltWnResult") == "미추첨"
+                    if item.get("ltWnResult") == "ë¯¸ì¶”ì²¨"
                 ]
             )
             if this_week_buy_count >= 5:
@@ -224,7 +235,7 @@ class DhLotto720:
             import json
             param = json.dumps([
                 {
-                    "genType": "0",  # 0 = Auto (연금복권은 자동만 가능)
+                    "genType": "0",  # 0 = Auto (ì—°ê¸ˆë³µê¶Œì€ ìžë™ë§Œ ê°€ëŠ¥)
                     "arrGameChoiceNum": None,
                     "alpabet": "ABCDE"[i],
                 }
