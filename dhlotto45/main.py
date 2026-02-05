@@ -136,90 +136,49 @@ async def register_buttons():
     username = config["username"]
     logger.info(f"[BUTTON] Registering button entities for user: {username}")
     
-    # ===== Lotto 6/45 Buttons (Device 1) =====
-    lotto645_device_name = f"DH Lottery Lotto 645 ({username})"
-    lotto645_device_id = f"dhlotto_{username}_lotto645"
+    # Lotto 6/45 buttons only - using main device
+    main_device_name = f"DH Lottery Add-on ({username})"
+    main_device_id = f"dhlotto_addon_{username}"
     
     # Button 1: Buy 1 Auto Game (Lotto 6/45)
     button1_topic = f"homeassistant/button/dhlotto_{username}_buy_auto_1/command"
-    logger.info(f"[BUTTON] Lotto 645 Button 1 command topic: {button1_topic}")
+    logger.info(f"[BUTTON] Button 1 command topic: {button1_topic}")
     
     success1 = mqtt_client.publish_button_discovery(
         button_id="buy_auto_1",
         name="Buy 1 Auto Game",
         command_topic=button1_topic,
         username=username,
-        device_name=lotto645_device_name,
-        device_identifier=lotto645_device_id,
+        device_name=main_device_name,
+        device_identifier=main_device_id,
         icon="mdi:ticket-confirmation",
     )
     if success1:
-        logger.info("[BUTTON] Lotto 645 button registered: buy_auto_1")
+        logger.info("[BUTTON] Button registered: buy_auto_1")
     else:
-        logger.error("[BUTTON] Failed to register Lotto 645 button: buy_auto_1")
+        logger.error("[BUTTON] Failed to register button: buy_auto_1")
     
     # Button 2: Buy 5 Auto Games (Lotto 6/45, Max)
     button2_topic = f"homeassistant/button/dhlotto_{username}_buy_auto_5/command"
-    logger.info(f"[BUTTON] Lotto 645 Button 2 command topic: {button2_topic}")
+    logger.info(f"[BUTTON] Button 2 command topic: {button2_topic}")
     
     success2 = mqtt_client.publish_button_discovery(
         button_id="buy_auto_5",
         name="Buy 5 Auto Games",
         command_topic=button2_topic,
         username=username,
-        device_name=lotto645_device_name,
-        device_identifier=lotto645_device_id,
+        device_name=main_device_name,
+        device_identifier=main_device_id,
         icon="mdi:ticket-confirmation-outline",
     )
     if success2:
-        logger.info("[BUTTON] Lotto 645 button registered: buy_auto_5")
+        logger.info("[BUTTON] Button registered: buy_auto_5")
     else:
-        logger.error("[BUTTON] Failed to register Lotto 645 button: buy_auto_5")
+        logger.error("[BUTTON] Failed to register button: buy_auto_5")
     
-    # ===== Pension Lottery 720+ Buttons (Device 2) =====
-    pension_device_name = f"DH Lottery Pension 720 ({username})"
-    pension_device_id = f"dhlotto_{username}_pension720"
-    
-    # Button 3: Buy 1 Pension Lottery
-    button3_topic = f"homeassistant/button/dhlotto_{username}_buy_pension_1/command"
-    logger.info(f"[BUTTON] Pension 720 Button 1 command topic: {button3_topic}")
-    
-    success3 = mqtt_client.publish_button_discovery(
-        button_id="buy_pension_1",
-        name="Buy 1 Pension Lottery",
-        command_topic=button3_topic,
-        username=username,
-        device_name=pension_device_name,
-        device_identifier=pension_device_id,
-        icon="mdi:cash-multiple",
-    )
-    if success3:
-        logger.info("[BUTTON] Pension 720 button registered: buy_pension_1")
-    else:
-        logger.error("[BUTTON] Failed to register Pension 720 button: buy_pension_1")
-    
-    # Button 4: Buy 5 Pension Lotteries (Max)
-    button4_topic = f"homeassistant/button/dhlotto_{username}_buy_pension_5/command"
-    logger.info(f"[BUTTON] Pension 720 Button 2 command topic: {button4_topic}")
-    
-    success4 = mqtt_client.publish_button_discovery(
-        button_id="buy_pension_5",
-        name="Buy 5 Pension Lotteries",
-        command_topic=button4_topic,
-        username=username,
-        device_name=pension_device_name,
-        device_identifier=pension_device_id,
-        icon="mdi:cash-check",
-    )
-    if success4:
-        logger.info("[BUTTON] Pension 720 button registered: buy_pension_5")
-    else:
-        logger.error("[BUTTON] Failed to register Pension 720 button: buy_pension_5")
-    
-    if success1 and success2 and success3 and success4:
-        logger.info("[BUTTON] All button entities registered successfully")
-        logger.info(f"[BUTTON] Lotto 645 device: {lotto645_device_name}")
-        logger.info(f"[BUTTON] Pension 720 device: {pension_device_name}")
+    if success1 and success2:
+        logger.info("[BUTTON] All Lotto 645 buttons registered successfully")
+        logger.info(f"[BUTTON] Device: {main_device_name}")
     else:
         logger.warning("[BUTTON] Some buttons failed to register")
 
@@ -272,119 +231,64 @@ async def execute_button_purchase(button_id: str):
     """Execute purchase based on button_id"""
     logger.info(f"[PURCHASE] Starting purchase for button_id: {button_id}")
     
-    # Check if it's a pension lottery button
-    if button_id.startswith("buy_pension_"):
-        # Pension lottery purchase
-        if not lotto_720:
-            logger.error("[PURCHASE] Pension Lottery not enabled")
-            return
-        
-        try:
-            # Determine number of tickets
-            count = 1
-            if button_id == "buy_pension_5":
-                count = 5
-            elif button_id == "buy_pension_1":
-                count = 1
-            else:
-                logger.warning(f"[PURCHASE] Unknown button_id: {button_id}, defaulting to 1 ticket")
-                count = 1
-            
-            logger.info(f"[PURCHASE] Executing pension lottery purchase: {count} ticket(s)...")
-            
-            # Execute purchase
-            result = await lotto_720.async_buy(count)
-            
-            logger.info(f"[PURCHASE] Pension lottery purchase successful!")
-            logger.info(f"[PURCHASE] Round: {result.round_no}")
-            logger.info(f"[PURCHASE] Barcode: {result.barcode}")
-            logger.info(f"[PURCHASE] Issue Date: {result.issue_dt}")
-            logger.info(f"[PURCHASE] Tickets: {len(result.numbers)}")
-            
-            # Format ticket numbers for logging
-            for i, number in enumerate(result.numbers, 1):
-                logger.info(f"[PURCHASE]   Ticket {i}: {number}")
-            
-            # Update all sensors immediately to reflect the purchase
-            logger.info(f"[PURCHASE] Updating all sensors...")
-            await update_sensors()
-            
-            logger.info(f"[PURCHASE] Pension lottery purchase completed successfully!")
-            
-        except Exception as e:
-            logger.error(f"[PURCHASE] Pension lottery purchase failed: {e}", exc_info=True)
-            
-            # Send error notification
-            error_data = {
-                "error": str(e),
-                "button_id": button_id,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "friendly_name": "Pension Purchase Error",
-                "icon": "mdi:alert-circle",
-            }
-            
-            logger.info(f"[PURCHASE] Publishing error sensor...")
-            await publish_sensor("lotto720_purchase_error", str(e)[:255], error_data)
+    # Lotto 6/45 purchase only
+    if not lotto_645:
+        logger.error("[PURCHASE] Lotto 645 not enabled")
+        return
     
-    else:
-        # Lotto 6/45 purchase
-        if not lotto_645:
-            logger.error("[PURCHASE] Lotto 645 not enabled")
-            return
+    try:
+        from dh_lotto_645 import DhLotto645, DhLotto645SelMode
         
-        try:
-            from dh_lotto_645 import DhLotto645, DhLotto645SelMode
-            
-            # Determine number of games
+        # Determine number of games
+        count = 1
+        if button_id == "buy_auto_5":
+            count = 5
+        elif button_id == "buy_auto_1":
             count = 1
-            if button_id == "buy_auto_5":
-                count = 5
-            elif button_id == "buy_auto_1":
-                count = 1
-            else:
-                logger.warning(f"[PURCHASE] Unknown button_id: {button_id}, defaulting to 1 game")
-                count = 1
-            
-            logger.info(f"[PURCHASE] Creating {count} auto game slots...")
-            
-            # Create auto game slots
-            slots = [DhLotto645.Slot(mode=DhLotto645SelMode.AUTO, numbers=[]) for _ in range(count)]
-            
-            logger.info(f"[PURCHASE] Executing purchase: {count} game(s)...")
-            
-            # Execute purchase
-            result = await lotto_645.async_buy(slots)
-            
-            logger.info(f"[PURCHASE] Purchase successful!")
-            logger.info(f"[PURCHASE] Round: {result.round_no}")
-            logger.info(f"[PURCHASE] Barcode: {result.barcode}")
-            logger.info(f"[PURCHASE] Issue Date: {result.issue_dt}")
-            logger.info(f"[PURCHASE] Games: {len(result.games)}")
-            
-            # Format games for logging
-            for game in result.games:
-                logger.info(f"[PURCHASE]   Slot {game.slot}: {game.numbers} ({game.mode})")
-            
-            # Update all sensors immediately to reflect the purchase
-            logger.info(f"[PURCHASE] Updating all sensors...")
-            await update_sensors()
-            
-            logger.info(f"[PURCHASE] Purchase completed successfully!")
-            
-        except Exception as e:
-            logger.error(f"[PURCHASE] Purchase failed: {e}", exc_info=True)
-            
-            # Send error notification
-            error_data = {
-                "error": str(e),
-                "button_id": button_id,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "friendly_name": "Purchase Error",
-                "icon": "mdi:alert-circle",
-            }
-            
-            logger.info(f"[PURCHASE] Publishing error sensor...")
-            await publish_sensor("lotto45_purchase_error", str(e)[:255], error_data)
+        else:
+            logger.warning(f"[PURCHASE] Unknown button_id: {button_id}, defaulting to 1 game")
+            count = 1
+        
+        logger.info(f"[PURCHASE] Creating {count} auto game slots...")
+        
+        # Create auto game slots
+        slots = [DhLotto645.Slot(mode=DhLotto645SelMode.AUTO, numbers=[]) for _ in range(count)]
+        
+        logger.info(f"[PURCHASE] Executing purchase: {count} game(s)...")
+        
+        # Execute purchase
+        result = await lotto_645.async_buy(slots)
+        
+        logger.info(f"[PURCHASE] Purchase successful!")
+        logger.info(f"[PURCHASE] Round: {result.round_no}")
+        logger.info(f"[PURCHASE] Barcode: {result.barcode}")
+        logger.info(f"[PURCHASE] Issue Date: {result.issue_dt}")
+        logger.info(f"[PURCHASE] Games: {len(result.games)}")
+        
+        # Format games for logging
+        for game in result.games:
+            logger.info(f"[PURCHASE]   Slot {game.slot}: {game.numbers} ({game.mode})")
+        
+        # Update all sensors immediately to reflect the purchase
+        logger.info(f"[PURCHASE] Updating all sensors...")
+        await update_sensors()
+        
+        logger.info(f"[PURCHASE] Purchase completed successfully!")
+        
+    except Exception as e:
+        logger.error(f"[PURCHASE] Purchase failed: {e}", exc_info=True)
+        
+        # Send error notification
+        error_data = {
+            "error": str(e),
+            "button_id": button_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "friendly_name": "Purchase Error",
+            "icon": "mdi:alert-circle",
+        }
+        
+        logger.info(f"[PURCHASE] Publishing error sensor...")
+        await publish_sensor("lotto45_purchase_error", str(e)[:255], error_data)
 
 
 async def init_client():

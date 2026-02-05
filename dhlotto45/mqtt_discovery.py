@@ -118,6 +118,8 @@ class MQTTDiscovery:
         name: str,
         state_topic: str,
         username: str,
+        device_name: Optional[str] = None,
+        device_identifier: Optional[str] = None,
         unit_of_measurement: Optional[str] = None,
         device_class: Optional[str] = None,
         icon: Optional[str] = None,
@@ -132,6 +134,8 @@ class MQTTDiscovery:
             name: Friendly name
             state_topic: MQTT topic for state
             username: DH Lottery username (for unique_id)
+            device_name: Device name (optional, uses default if not provided)
+            device_identifier: Device identifier (optional, uses default if not provided)
             unit_of_measurement: Unit (e.g., 'KRW', 'times')
             device_class: Device class (e.g., 'timestamp', 'date')
             icon: Icon (e.g., 'mdi:wallet')
@@ -141,6 +145,12 @@ class MQTTDiscovery:
         if not self.connected:
             _LOGGER.warning("Not connected to MQTT broker")
             return False
+        
+        # Use default device if not specified
+        if not device_name:
+            device_name = f"DH Lottery Add-on ({username})"
+        if not device_identifier:
+            device_identifier = f"{TOPIC_PREFIX}_addon_{username}"
         
         # Discovery topic: homeassistant/sensor/dhlotto_USERNAME_SENSOR_ID/config
         discovery_topic = f"homeassistant/sensor/{TOPIC_PREFIX}_{username}_{sensor_id}/config"
@@ -157,8 +167,8 @@ class MQTTDiscovery:
             "object_id": object_id,
             "state_topic": state_topic,
             "device": {
-                "identifiers": [f"{TOPIC_PREFIX}_{username}"],
-                "name": f"DH Lottery ({username})",
+                "identifiers": [device_identifier],
+                "name": device_name,
                 "manufacturer": "DH Lottery",
                 "model": "Add-on",
                 "sw_version": "1.0.0",
@@ -326,8 +336,8 @@ class MQTTDiscovery:
             _LOGGER.warning("Not connected to MQTT broker")
             return False
         
-        # Subscribe to each button command topic individually
-        button_ids = ["buy_auto_1", "buy_auto_5", "buy_pension_1", "buy_pension_5"]
+        # Subscribe to Lotto 645 button commands only
+        button_ids = ["buy_auto_1", "buy_auto_5"]
         
         try:
             self.client.on_message = callback
