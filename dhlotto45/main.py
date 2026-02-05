@@ -516,5 +516,151 @@ async def get_balance():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/buy")
+async def buy_lotto(games: list[dict]):
+    """로또 6/45 구매
+    
+    Args:
+        games: 게임 리스트
+            - mode: "자동", "수동", "반자동"
+            - numbers: 번호 리스트 (수동/반자동일 때만)
+    
+    Example:
+        [
+            {"mode": "자동"},
+            {"mode": "수동", "numbers": [1, 7, 12, 23, 34, 41]},
+            {"mode": "반자동", "numbers": [3, 9, 15]}
+        ]
+    """
+    if not lotto_645:
+        raise HTTPException(status_code=400, detail="Lotto 645 not enabled")
+    
+    if not games or len(games) == 0:
+        raise HTTPException(status_code=400, detail="At least 1 game required")
+    
+    if len(games) > 5:
+        raise HTTPException(status_code=400, detail="Maximum 5 games allowed")
+    
+    try:
+        # 게임 슬롯 생성
+        from dh_lotto_645 import DhLotto645
+        
+        slots = []
+        for i, game in enumerate(games):
+            mode_str = game.get("mode", "자동")
+            numbers = game.get("numbers", [])
+            
+            # 모드 검증
+            if mode_str not in ["자동", "수동", "반자동"]:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Game {i+1}: Invalid mode '{mode_str}'. Must be '자동', '수동', or '반자동'"
+                )
+            
+            # 번호 검증 (수동/반자동)
+            if mode_str in ["수동", "반자동"]:
+                if not numbers:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Game {i+1}: Numbers required for mode '{mode_str}'"
+                    )
+                if len(numbers) > 6:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Game {i+1}: Maximum 6 numbers allowed"
+                    )
+                if any(n < 1 or n > 45 for n in numbers):
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Game {i+1}: Numbers must be between 1 and 45"
+                    )
+            
+            # 슬롯 추가
+            from dh_lotto_645 import DhLotto645SelMode
+            
+            if mode_str == "자동":
+                slots.append(DhLotto645.Slot(mode=DhLotto645SelMode.AUTO))
+            elif mode_str == "수동":
+                slots.append(DhLotto645.Slot(mode=DhLotto645SelMode.MANUAL, numbers=numbers))
+            else:  # 반자동
+                slots.append(DhLotto645.Slot(mode=DhLotto645SelMode.SEMI_AUTO, numbers=numbers))
+        
+        # 구매 실행
+        logger.info(f"Purchasing {len(slots)} games...")
+        result = await lotto_645.async_buy(slots)
+        
+        # 결과 반환
+        response = {
+            "success": True,
+            "round_no": result.round_no,
+            "barcode": result.barcode,
+            "issue_dt": result.issue_dt,
+            "games": [
+                {
+                    "slot": game.slot,
+                    "mode": str(game.mode),
+                    "numbers": game.numbers,
+                }
+                for game in result.games
+            ]
+        }
+        
+        logger.info(f"Purchase successful: Round {result.round_no}, Barcode {result.barcode}")
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Purchase failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/buy/auto")
+async def buy_lotto_auto(count: int = 1):
+    """로또 6/45 자동 구매
+    
+    Args:
+        count: 구매할 게임 수 (1-5)
+    """
+    if count < 1 or count > 5:
+        raise HTTPException(status_code=400, detail="Count must be between 1 and 5")
+    
+    games = [{"mode": "자동"} for _ in range(count)]
+    return await buy_lotto(games)
+
+
+@app.get("/buy/history")
+async def get_buy_history():
+    """최근 1주일 구매 내역 조회"""
+    if not lotto_645:
+        raise HTTPException(status_code=400, detail="Lotto 645 not enabled")
+    
+    try:
+        history = await lotto_645.async_get_buy_history_this_week()
+        
+        results = []
+        for item in history:
+            results.append({
+                "round_no": item.round_no,
+                "barcode": item.barcode,
+                "result": item.result,
+                "games": [
+                    {
+                        "slot": game.slot,
+                        "mode": str(game.mode),
+                        "numbers": game.numbers,
+                    }
+                    for game in item.games
+                ]
+            })
+        
+        return {
+            "count": len(results),
+            "items": results,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=60099, log_level="info")
