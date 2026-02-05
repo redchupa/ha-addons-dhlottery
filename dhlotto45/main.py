@@ -688,6 +688,26 @@ async def update_sensors():
                     "icon": "mdi:star-circle",
                 })
                 
+                # Winning numbers combined (all 6 numbers + bonus)
+                winning_numbers = [
+                    _safe_int(item.get("tm1WnNo")),
+                    _safe_int(item.get("tm2WnNo")),
+                    _safe_int(item.get("tm3WnNo")),
+                    _safe_int(item.get("tm4WnNo")),
+                    _safe_int(item.get("tm5WnNo")),
+                    _safe_int(item.get("tm6WnNo")),
+                ]
+                bonus_number = _safe_int(item.get("bnsWnNo"))
+                winning_text = f"{', '.join(map(str, winning_numbers))} + {bonus_number}"
+                
+                await publish_sensor("lotto645_winning_numbers", winning_text, {
+                    "numbers": winning_numbers,
+                    "bonus": bonus_number,
+                    "round": _safe_int(item.get("ltEpsd")),
+                    "friendly_name": "Lotto 645 Winning Numbers",
+                    "icon": "mdi:trophy-award",
+                })
+                
                 # Draw date
                 draw_date = _parse_yyyymmdd(item.get("ltRflYmd"))
                 if draw_date:
