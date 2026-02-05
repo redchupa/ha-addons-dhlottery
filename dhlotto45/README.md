@@ -156,11 +156,18 @@ automation:
 
 이 애드온이 유용하셨다면 커피 한 잔 후원 부탁드립니다!
 
-### Toss (토스)
-![Toss](https://raw.githubusercontent.com/redchupa/ha-addons-dhlottery/main/images/toss-donation.png)
-
-### PayPal
-![PayPal](https://raw.githubusercontent.com/redchupa/ha-addons-dhlottery/main/images/paypal-donation.png)
+<table>
+  <tr>
+    <td align="center">
+      <b>Toss (토스)</b><br>
+      <img src="https://raw.githubusercontent.com/redchupa/ha-addons-dhlottery/main/images/toss-donation.png" width="200">
+    </td>
+    <td align="center">
+      <b>PayPal</b><br>
+      <img src="https://raw.githubusercontent.com/redchupa/ha-addons-dhlottery/main/images/paypal-donation.png" width="200">
+    </td>
+  </tr>
+</table>
 
 ## 라이선스
 
