@@ -1,0 +1,45 @@
+{
+  "name": "DH Lotto 45",
+  "version": "0.3.0",
+  "slug": "dhlotto45",
+  "description": "동행복권 로또 6/45 통합 애드온",
+  "url": "https://github.com/yourusername/dhlotto45-addon",
+  "arch": ["amd64", "armv7", "aarch64"],
+  "startup": "services",
+  "boot": "auto",
+  "init": false,
+  "options": {
+    "username": "",
+    "password": "",
+    "enable_lotto645": true,
+    "update_interval": 3600,
+    "use_mqtt": false
+  },
+  "schema": {
+    "username": "str",
+    "password": "password",
+    "enable_lotto645": "bool",
+    "update_interval": "int(60,86400)?",
+    "use_mqtt": "bool?"
+  },
+  "ports": {
+    "8099/tcp": 8099
+  },
+  "ports_description": {
+    "8099/tcp": "Web UI 및 API"
+  },
+  "homeassistant_api": true,
+  "hassio_api": true,
+  "hassio_role": "default",
+  "auth_api": true,
+  "ingress": true,
+  "ingress_port": 8099,
+  "ingress_stream": false,
+  "panel_icon": "mdi:ticket-confirmation",
+  "panel_title": "동행복권",
+  "host_network": false,
+  "privileged": [],
+  "full_access": false,
+  "apparmor": true,
+  "image": "ghcr.io/{arch}-dhlotto45-addon"
+}
