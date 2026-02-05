@@ -375,4 +375,4 @@ async def get_balance():
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8099, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=60099, log_level="info")
