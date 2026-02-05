@@ -855,9 +855,6 @@ async def update_sensors():
                     
                 except Exception as e:
                     logger.warning(f"Failed to fetch pension lottery results: {e}")
-                
-            except Exception as e:
-                logger.warning(f"Failed to fetch lotto results: {e}")
             
             # Number frequency analysis
             try:
