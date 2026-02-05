@@ -24,7 +24,7 @@ Home Assistant용 동행복권 통합 애드온 저장소입니다.
 3. 우측 상단 메뉴(점 3개) 클릭 > **Repositories** 선택
 4. 다음 URL 입력:
    ```
-   https://github.com/YOUR_USERNAME/ha-addons-dhlottery
+   https://github.com/redchupa/ha-addons-dhlottery
    ```
 5. **Add** 클릭
 
@@ -57,7 +57,7 @@ Log 탭에서 "Login successful" 메시지 확인
 
 ## 지원
 
-문제가 발생하면 [Issues](https://github.com/YOUR_USERNAME/ha-addons-dhlottery/issues)에 보고해주세요.
+문제가 발생하면 [Issues](https://github.com/redchupa/ha-addons-dhlottery/issues)에 보고해주세요.
 
 자세한 사용법은 각 애드온의 Documentation 탭을 참고하세요.
 
@@ -66,10 +66,10 @@ Log 탭에서 "Login successful" 메시지 확인
 이 프로젝트가 도움이 되셨다면 후원을 부탁드립니다.
 
 ### Toss (토스)
-![Toss QR](https://raw.githubusercontent.com/YOUR_USERNAME/ha-addons-dhlottery/main/images/toss-donation.png)
+![Toss QR](https://raw.githubusercontent.com/redchupa/ha-addons-dhlottery/main/images/toss-donation.png)
 
 ### PayPal
-![PayPal QR](https://raw.githubusercontent.com/YOUR_USERNAME/ha-addons-dhlottery/main/images/paypal-donation.png)
+![PayPal QR](https://raw.githubusercontent.com/redchupa/ha-addons-dhlottery/main/images/paypal-donation.png)
 
 ## 라이선스
 
