@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from typing import List, Dict, Optional
 from collections import Counter
 
-from .dh_lottery_client import DhLotteryClient, DhLotteryError
-from .dh_lotto_645 import DhLotto645
+from dh_lottery_client import DhLotteryClient, DhLotteryError
+from dh_lotto_645 import DhLotto645
 
 _LOGGER = logging.getLogger(__name__)
 

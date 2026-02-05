@@ -6,7 +6,7 @@ from enum import StrEnum
 from typing import List, Dict, Optional
 
 
-from .dh_lottery_client import DhLotteryClient, DhLotteryError
+from dh_lottery_client import DhLotteryClient, DhLotteryError
 
 _LOGGER = logging.getLogger(__name__)
 

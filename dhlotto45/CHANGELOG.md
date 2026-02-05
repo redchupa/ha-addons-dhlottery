@@ -1,5 +1,12 @@
 # 변경 이력
 
+## [0.4.0] - 2025-02-05
+
+### 수정
+- Python import 오류 수정: 상대 import를 절대 import로 변경
+- dh_lotto_645.py, dh_lotto_analyzer.py의 import 문 수정
+- 애드온 실행 안정화
+
 ## [0.3.9] - 2025-02-05
 
 ### 수정
