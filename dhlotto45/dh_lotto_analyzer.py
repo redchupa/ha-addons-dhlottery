@@ -178,10 +178,17 @@ class DhLottoAnalyzer:
             rank_distribution = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
             
             for item in items:
-                quantity = item.get("prchsQty", 0)
+                # None 값을 명시적으로 0으로 변환
+                quantity = item.get("prchsQty") or 0
+                if not isinstance(quantity, int):
+                    quantity = 0
                 total_purchase_count += quantity
                 
-                winning_amount = item.get("ltWnAmt", 0)
+                # None 값을 명시적으로 0으로 변환
+                winning_amount = item.get("ltWnAmt") or 0
+                if not isinstance(winning_amount, int):
+                    winning_amount = 0
+                    
                 if winning_amount > 0:
                     total_winning_count += 1
                     total_winning_amount += winning_amount
