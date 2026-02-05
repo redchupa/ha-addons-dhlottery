@@ -1,4 +1,4 @@
-ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base-python:3.11
+ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
 # 환경 변수
@@ -21,9 +21,9 @@ COPY run.sh /
 # 실행 권한
 RUN chmod a+x /run.sh
 
-# 헬스체크
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python3 -c "import requests; requests.get('http://localhost:60099/health', timeout=5)" || exit 1
+# 헬스체크 (선택사항)
+# HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+#     CMD wget --no-verbose --tries=1 --spider http://localhost:60099/health || exit 1
 
 # 포트 노출
 EXPOSE 60099

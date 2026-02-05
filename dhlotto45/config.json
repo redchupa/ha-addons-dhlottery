@@ -5,6 +5,11 @@
   "description": "동행복권 로또 6/45 통합 애드온",
   "url": "https://github.com/redchupa/ha-addons-dhlottery",
   "arch": ["amd64", "armv7", "aarch64"],
+  "build_from": {
+    "amd64": "ghcr.io/home-assistant/amd64-base-python:3.11",
+    "aarch64": "ghcr.io/home-assistant/aarch64-base-python:3.11",
+    "armv7": "ghcr.io/home-assistant/armv7-base-python:3.11"
+  },
   "startup": "services",
   "boot": "auto",
   "init": false,
