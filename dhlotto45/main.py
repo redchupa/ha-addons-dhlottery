@@ -99,6 +99,31 @@ def _get_lotto645_item(data: dict) -> dict:
     return data
 
 
+def _translate_result(result: str) -> str:
+    """Translate Korean lottery result to English"""
+    if not result:
+        return "Unknown"
+    
+    result_lower = result.lower()
+    
+    # Korean to English mapping
+    translations = {
+        "미추첨": "Pending",
+        "낙첨": "No Win",
+        "1등": "1st Prize",
+        "2등": "2nd Prize",
+        "3등": "3rd Prize",
+        "4등": "4th Prize",
+        "5등": "5th Prize",
+    }
+    
+    for korean, english in translations.items():
+        if korean in result:
+            return english
+    
+    return result
+
+
 async def register_buttons():
     """Register button entities via MQTT Discovery"""
     if not mqtt_client or not mqtt_client.connected:
@@ -749,6 +774,21 @@ async def update_sensors():
                     })
                     
                     logger.info("Latest purchase sensor published successfully")
+                    
+                    # Publish individual game sensors (up to 5 games)
+                    logger.info(f"Publishing {len(latest_purchase.games)} individual game sensors...")
+                    for i, game in enumerate(latest_purchase.games[:5], 1):
+                        numbers_str = ", ".join(map(str, game.numbers))
+                        await publish_sensor(f"lotto45_game_{i}", numbers_str, {
+                            "slot": game.slot,
+                            "mode": str(game.mode),
+                            "numbers": game.numbers,
+                            "round_no": latest_purchase.round_no,
+                            "result": latest_purchase.result,
+                            "friendly_name": f"Game {i}",
+                            "icon": f"mdi:numeric-{i}-box-multiple",
+                        })
+                        logger.info(f"Game {i} ({game.slot}): {numbers_str} - {game.mode}")
                     
                     # Count pending (not yet drawn) purchases
                     pending_count = 0
