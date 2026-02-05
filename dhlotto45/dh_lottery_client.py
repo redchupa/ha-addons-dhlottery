@@ -96,7 +96,10 @@ class DhLotteryClient:
 
         if 'data' not in result:
             raise DhLotteryError('[ERROR]  API    .')
-        return result.get('data', {})
+        
+        # Handle case where data is None
+        data = result.get('data')
+        return data if data is not None else {}
 
     async def async_get(self, path: str, params: dict) -> dict:
         """Login 필요 not page 져옵니다."""

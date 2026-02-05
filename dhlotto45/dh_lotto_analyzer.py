@@ -169,6 +169,10 @@ class DhLottoAnalyzer:
                 },
             )
             
+            # Handle case where result is None or empty
+            if result is None:
+                result = {}
+            
             items = result.get("list", [])
             
             # 통계 계산
