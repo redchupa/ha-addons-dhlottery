@@ -710,12 +710,13 @@ async def update_sensors():
                     _safe_int(result_item.get("tm6WnNo")),
                 ]
                 bonus_number = _safe_int(result_item.get("bnsWnNo"))
-                winning_text = f"{', '.join(map(str, winning_numbers))} + {bonus_number}"
+                round_no = _safe_int(result_item.get("ltEpsd"))
+                winning_text = f"{round_no}회, {', '.join(map(str, winning_numbers))} + {bonus_number}"
                 
                 await publish_sensor("lotto645_winning_numbers", winning_text, {
                     "numbers": winning_numbers,
                     "bonus": bonus_number,
-                    "round": _safe_int(result_item.get("ltEpsd")),
+                    "round": round_no,
                     "friendly_name": "Lotto 645 Winning Numbers",
                     "icon": "mdi:trophy-award",
                 })
