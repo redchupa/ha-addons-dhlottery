@@ -659,8 +659,8 @@ async def update_sensors():
         now = datetime.now(timezone.utc).isoformat()
         await publish_sensor("lotto45_last_update", now, {
             "friendly_name": "Last Update",
-            "device_class": "timestamp",
             "icon": "mdi:clock-check-outline",
+            # Note: removed device_class="timestamp" to avoid timezone validation issues
         })
         
         logger.info("Sensors updated successfully")
