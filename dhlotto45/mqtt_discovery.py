@@ -322,13 +322,17 @@ class MQTTDiscovery:
             _LOGGER.warning("Not connected to MQTT broker")
             return False
         
-        # Subscribe to all button command topics
-        command_topic = f"homeassistant/button/{TOPIC_PREFIX}_{username}_+/command"
+        # Subscribe to each button command topic individually
+        button_ids = ["buy_auto_1", "buy_auto_5"]
         
         try:
-            result = self.client.subscribe(command_topic)
             self.client.on_message = callback
-            _LOGGER.info(f"Subscribed to button commands: {command_topic}")
+            
+            for button_id in button_ids:
+                command_topic = f"homeassistant/button/{TOPIC_PREFIX}_{username}_{button_id}/command"
+                result = self.client.subscribe(command_topic)
+                _LOGGER.info(f"Subscribed to: {command_topic}")
+            
             _LOGGER.info("Waiting for button press events...")
             return True
         except Exception as e:
