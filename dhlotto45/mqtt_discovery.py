@@ -148,7 +148,7 @@ class MQTTDiscovery:
         
         # Use default device if not specified
         if not device_name:
-            device_name = f"DH Lottery Add-on ({username})"
+            device_name = f"동행복권 애드온 ({username})"
         if not device_identifier:
             device_identifier = f"{TOPIC_PREFIX}_addon_{username}"
         
