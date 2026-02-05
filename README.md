@@ -389,7 +389,7 @@ cards:
         name: 5게임 구매
   
   - type: entities
-    title: 📊 번호 통계
+    title: 번호 통계
     entities:
       - entity: sensor.dhlotto_ng410808_lotto45_hot_numbers
         name: 핫 넘버
