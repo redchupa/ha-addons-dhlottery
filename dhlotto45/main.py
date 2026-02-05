@@ -119,7 +119,7 @@ def _translate_result(result: str) -> str:
     
     # Korean to English mapping
     translations = {
-        "ÃƒÆ’Ã‚Â«Ãƒâ€šÃ‚Â¯Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¬Ãƒâ€šÃ‚Â¶ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã‚Â¬Ãƒâ€šÃ‚Â²Ãƒâ€šÃ‚Â¨": "Pending",
+        "ÃƒÆ’Ã‚Â«Ãƒâ€šÃ‚Â¯Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¬Ãƒâ€šÃ‚Â¶ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã‚Â¬Ãƒâ€šÃ‚Â²Ãƒâ€šÃ‚Â¨": "Pending",
         "ÃƒÆ’Ã‚Â«ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã‚Â¬Ãƒâ€šÃ‚Â²Ãƒâ€šÃ‚Â¨": "No Win",
         "1ÃƒÆ’Ã‚Â«ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒâ€šÃ‚Â±": "1st Prize",
         "2ÃƒÆ’Ã‚Â«ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒâ€šÃ‚Â±": "2nd Prize",
@@ -701,13 +701,13 @@ async def update_sensors():
                 # Numbers 1-6
                 for i in range(1, 7):
                     await publish_sensor(f"lotto645_number{i}", _safe_int(result_item.get(f"tm{i}WnNo")), {
-                        "friendly_name": f"로또 645 번호 {i}",
+                        "friendly_name": f"로또 645 번호 {i}",
                         "icon": f"mdi:numeric-{i}-circle",
                     })
                 
                 # Bonus number
                 await publish_sensor("lotto645_bonus", _safe_int(result_item.get("bnsWnNo")), {
-                    "friendly_name": "로또 645 보너스",
+                    "friendly_name": "로또 645 보너스",
                     "icon": "mdi:star-circle",
                 })
                 
@@ -728,7 +728,7 @@ async def update_sensors():
                     "numbers": winning_numbers,
                     "bonus": bonus_number,
                     "round": round_no,
-                    "friendly_name": "로또 645 당첨번호",
+                    "friendly_name": "로또 645 당첨번호",
                     "icon": "mdi:trophy-award",
                 })
                 
@@ -826,7 +826,7 @@ async def update_sensors():
                 
                 # Total winners
                 await publish_sensor("lotto645_total_winners", _safe_int(item.get("sumWnNope")), {
-                    "friendly_name": "로또 645 이 당첨자",
+                    "friendly_name": "로또 645 총 당첨자",
                     "unit_of_measurement": "명",
                     "icon": "mdi:account-group",
                 })
@@ -844,7 +844,7 @@ async def update_sensors():
                         "count": top_num.count,
                         "percentage": top_num.percentage,
                         "unit_of_measurement": "회",
-                        "friendly_name": "로또 45 최다 출현 번호",
+                        "friendly_name": "로또 45 최다 출현 번호",
                         "icon": "mdi:star",
                     })
             except Exception as e:
@@ -856,7 +856,7 @@ async def update_sensors():
                 await publish_sensor("lotto45_hot_numbers", 
                     ",".join(map(str, hot_cold.hot_numbers)), {
                         "numbers": hot_cold.hot_numbers,
-                        "friendly_name": "로또 45 핫 넘버",
+                        "friendly_name": "로또 45 핫 넘버",
                         "icon": "mdi:fire",
                     })
                 await publish_sensor("lotto45_cold_numbers",
