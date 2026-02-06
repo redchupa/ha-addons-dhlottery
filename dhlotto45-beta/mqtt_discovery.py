@@ -65,7 +65,7 @@ class MQTTDiscovery:
         try:
             self.connecting = True
             
-            # Create unique client_id to avoid conflicts
+            # Create unique client_id
             import uuid
             if self.user_id:
                 client_id = f"dhlottery_beta_{self.user_id}_{uuid.uuid4().hex[:8]}"
@@ -74,7 +74,6 @@ class MQTTDiscovery:
             
             _LOGGER.info(f"Creating MQTT client with ID: {client_id}")
             
-            # Create client with unique ID and clean session
             self.client = mqtt.Client(
                 client_id=client_id,
                 clean_session=True,
@@ -87,7 +86,6 @@ class MQTTDiscovery:
             self.client.on_connect = self._on_connect
             self.client.on_disconnect = self._on_disconnect
             
-            # Enable automatic reconnection
             self.client.reconnect_delay_set(min_delay=1, max_delay=120)
             
             _LOGGER.info(f"Connecting to MQTT broker: {self.broker}:{self.port}")
@@ -109,9 +107,8 @@ class MQTTDiscovery:
             self.connecting = False
             self._reconnect_count = 0
             return True
-            
         except Exception as e:
-            _LOGGER.error(f"Failed to connect to MQTT broker: {e}", exc_info=True)
+            _LOGGER.error(f"Failed to connect to MQTT broker: {e}")
             self.connecting = False
             return False
     
