@@ -146,8 +146,13 @@ async def register_buttons():
     logger.info(f"[BUTTON] Registering button entities for user: {username}")
     
     # Lotto 6/45 buttons only - using main device
-    main_device_name = f"ë™í–‰ë³µê¶Œ ì• ë“œì˜¨ ({username})"
+    # Add beta suffix to device name if beta version
+    device_suffix = " (Beta)" if config.get("is_beta", False) else ""
+    main_device_name = f"동행복권 애드온{device_suffix} ({username})"
     main_device_id = f"dhlotto_addon_{username}"
+    
+    logger.info(f"[BUTTON] Topic prefix: {mqtt_client.topic_prefix}")
+    logger.info(f"[BUTTON] Device name: {main_device_name}")
     
     # Button 1: Buy 1 Auto Game (Lotto 6/45)
     button1_topic = f"homeassistant/button/{mqtt_client.topic_prefix}_{username}_buy_auto_1/command"
@@ -155,7 +160,7 @@ async def register_buttons():
     
     success1 = mqtt_client.publish_button_discovery(
         button_id="buy_auto_1",
-        name="1게임 ìžë™ êµ¬ë§¤",
+        name="1게임 자동 구매",
         command_topic=button1_topic,
         username=username,
         device_name=main_device_name,
@@ -173,7 +178,7 @@ async def register_buttons():
     
     success2 = mqtt_client.publish_button_discovery(
         button_id="buy_auto_5",
-        name="5게임 ìžë™ êµ¬ë§¤",
+        name="5게임 자동 구매",
         command_topic=button2_topic,
         username=username,
         device_name=main_device_name,
@@ -230,7 +235,6 @@ async def register_buttons():
         logger.info(f"[BUTTON] Device: {main_device_name}")
     else:
         logger.warning("[BUTTON] Some buttons or input text failed to register")
-
 
 def on_button_command(client_mqtt, userdata, message):
     """Handle MQTT button commands and input text changes"""
