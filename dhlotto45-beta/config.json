@@ -1,8 +1,8 @@
 {
   "name": "DH Lotto 45 (Beta)",
-  "version": "0.9.1",
+  "version": "1.0.0",
   "slug": "dhlotto45-beta",
-  "description": "DH Lottery Lottoey 6/45 Add-on with MQTT Discovery",
+  "description": "DH Lottery Lotto 6/45 Add-on with MQTT Discovery (Beta Version)",
   "url": "https://github.com/redchupa/ha-addons-dhlottery",
   "arch": ["amd64", "armv7", "aarch64"],
   "build_from": {
@@ -22,7 +22,7 @@
     "mqtt_url": "mqtt://homeassistant.local:1883",
     "mqtt_username": "",
     "mqtt_password": "",
-    "is_beta": false
+    "is_beta": true
   },
   "schema": {
     "username": "str",
@@ -39,7 +39,7 @@
     "60199/tcp": 60199
   },
   "ports_description": {
-    "60099/tcp": "Web UI and API"
+    "60199/tcp": "Web UI and API (Beta)"
   },
   "homeassistant_api": true,
   "hassio_api": true,
@@ -49,7 +49,7 @@
   "ingress_port": 60199,
   "ingress_stream": false,
   "panel_icon": "mdi:ticket-confirmation",
-  "panel_title": "DH Lottery 45 (Beta)",
+  "panel_title": "DH Lottery (Beta)",
   "host_network": false,
   "privileged": [],
   "full_access": false,
