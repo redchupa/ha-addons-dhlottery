@@ -49,7 +49,7 @@
   "ingress_port": 60199,
   "ingress_stream": false,
   "panel_icon": "mdi:ticket-confirmation",
-  "panel_title": "DH Lottery",
+  "panel_title": "DH Lottery 45 (Beta)",
   "host_network": false,
   "privileged": [],
   "full_access": false,
