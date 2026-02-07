@@ -652,7 +652,7 @@ async def custom_docs():
             
             <div class="note">
                 <strong> Tip:</strong> For full interactive Swagger UI, access directly via port:<br>
-                <code>http://homeassistant.local:60199/docs</code>
+                <code>http://homeassistant.local:60099/docs</code>
             </div>
             
             <h2>Available Endpoints</h2>
@@ -798,23 +798,23 @@ Response:
             <h2>Testing with cURL</h2>
             <p>Example cURL commands:</p>
             <pre># Health check
-curl http://homeassistant.local:60199/health
+curl http://homeassistant.local:60099/health
 
 # Get balance
-curl http://homeassistant.local:60199/balance
+curl http://homeassistant.local:60099/balance
 
 # Generate random numbers
-curl -X POST "http://homeassistant.local:60199/random?count=6&games=2"
+curl -X POST "http://homeassistant.local:60099/random?count=6&games=2"
 
 # Buy 3 auto tickets
-curl -X POST "http://homeassistant.local:60199/buy/auto?count=3"</pre>
+curl -X POST "http://homeassistant.local:60099/buy/auto?count=3"</pre>
             
             <h2>Access Full Swagger UI</h2>
             <p>For interactive API testing with Swagger UI:</p>
             <ol>
-                <li>Access the add-on directly via port 60199</li>
-                <li>Navigate to: <code>http://homeassistant.local:60199/docs</code></li>
-                <li>Or use your Home Assistant IP: <code>http://YOUR_HA_IP:60199/docs</code></li>
+                <li>Access the add-on directly via port 60099</li>
+                <li>Navigate to: <code>http://homeassistant.local:60099/docs</code></li>
+                <li>Or use your Home Assistant IP: <code>http://YOUR_HA_IP:60099/docs</code></li>
             </ol>
             
             <p><a href="."> Back to Home</a></p>
@@ -1376,8 +1376,8 @@ async def root():
                 <li><a href="health">Health Check</a></li>
                 <li><a href="stats">Statistics</a></li>
             </ul>
-            <p><strong> Advanced:</strong> For interactive Swagger UI, access directly via port 60199:<br>
-            <code>http://homeassistant.local:60199/docs</code></p>
+            <p><strong> Advanced:</strong> For interactive Swagger UI, access directly via port 60099:<br>
+            <code>http://homeassistant.local:60099/docs</code></p>
         </body>
     </html>
     """
@@ -1644,4 +1644,4 @@ async def get_buy_history():
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=60199, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=60099, log_level="info")
