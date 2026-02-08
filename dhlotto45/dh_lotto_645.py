@@ -12,11 +12,11 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class DhLotto645Error(DhLotteryError):
-    """DH Lotto 645 예외 클래스입니다."""
+    """DH Lotto 645 ì˜ˆì™¸ í´ëž˜ìŠ¤ìž…ë‹ˆë‹¤."""
 
 
 class DhLotto645SelMode(StrEnum):
-    """로또 purchase 모드 나타내는 열거형입니다."""
+    """ë¡œë˜ purchase ëª¨ë“œ ë‚˜íƒ€ë‚´ëŠ” ì—´ê±°í˜•ìž…ë‹ˆë‹¤."""
 
     AUTO = ""
     MANUAL = ""
@@ -24,7 +24,7 @@ class DhLotto645SelMode(StrEnum):
 
     @staticmethod
     def value_of(value: str) -> "DhLotto645SelMode":
-        """로또 purchase 모드 값 져옵니다."""
+        """ë¡œë˜ purchase ëª¨ë“œ ê°’ ì ¸ì˜µë‹ˆë‹¤."""
         if value == "1":
             return DhLotto645SelMode.MANUAL
         if value == "2":
@@ -34,7 +34,7 @@ class DhLotto645SelMode(StrEnum):
         raise ValueError(f"Invalid value: {value}")
 
     def to_value(self) -> str:
-        """로또 purchase 모드 값 져옵니다."""
+        """ë¡œë˜ purchase ëª¨ë“œ ê°’ ì ¸ì˜µë‹ˆë‹¤."""
         if self == DhLotto645SelMode.AUTO:
             return "0"
         if self == DhLotto645SelMode.MANUAL:
@@ -45,7 +45,7 @@ class DhLotto645SelMode(StrEnum):
 
     @staticmethod
     def value_of_text(text: str) -> "DhLotto645SelMode":
-        """로또 purchase 모드 값 져옵니다."""
+        """ë¡œë˜ purchase ëª¨ë“œ ê°’ ì ¸ì˜µë‹ˆë‹¤."""
         if "" in text:
             return DhLotto645SelMode.SEMI_AUTO
         if "" in text:
@@ -55,7 +55,7 @@ class DhLotto645SelMode(StrEnum):
         raise ValueError(f"Invalid text: {text}")
 
     def __str__(self):
-        """로또 purchase 모드 값 져옵니다."""
+        """ë¡œë˜ purchase ëª¨ë“œ ê°’ ì ¸ì˜µë‹ˆë‹¤."""
         if self == DhLotto645SelMode.AUTO:
             return ""
         if self == DhLotto645SelMode.MANUAL:
@@ -66,11 +66,11 @@ class DhLotto645SelMode(StrEnum):
 
 
 class DhLotto645:
-    """동행복권 로또 6/45 purchase하는 클래스입니다."""
+    """ë™í–‰ë³µê¶Œ ë¡œë˜ 6/45 purchaseí•˜ëŠ” í´ëž˜ìŠ¤ìž…ë‹ˆë‹¤."""
 
     @dataclass
     class WinningData:
-        """로또 winning 정보 나타내는 데터 클래스입니다."""
+        """ë¡œë˜ winning ì •ë³´ ë‚˜íƒ€ë‚´ëŠ” ë°í„° í´ëž˜ìŠ¤ìž…ë‹ˆë‹¤."""
 
         round_no: int
         numbers: List[int]
@@ -79,14 +79,14 @@ class DhLotto645:
 
     @dataclass
     class Slot:
-        """로또 슬롯 정보 나타내는 데터 클래스입니다."""
+        """ë¡œë˜ ìŠ¬ë¡¯ ì •ë³´ ë‚˜íƒ€ë‚´ëŠ” ë°í„° í´ëž˜ìŠ¤ìž…ë‹ˆë‹¤."""
 
         mode: DhLotto645SelMode = DhLotto645SelMode.AUTO
         numbers: List[int] = field(default_factory=lambda: [])
 
     @dataclass(order=True)
     class Game:
-        """로또 게임 정보 나타내는 데터 클래스입니다."""
+        """ë¡œë˜ ê²Œìž„ ì •ë³´ ë‚˜íƒ€ë‚´ëŠ” ë°í„° í´ëž˜ìŠ¤ìž…ë‹ˆë‹¤."""
 
         slot: str
         mode: DhLotto645SelMode = DhLotto645SelMode.AUTO
@@ -94,7 +94,7 @@ class DhLotto645:
 
     @dataclass
     class BuyData:
-        """로또 purchase 결과 나타내는 데터 클래스입니다."""
+        """ë¡œë˜ purchase ê²°ê³¼ ë‚˜íƒ€ë‚´ëŠ” ë°í„° í´ëž˜ìŠ¤ìž…ë‹ˆë‹¤."""
 
         round_no: int
         barcode: str
@@ -102,7 +102,7 @@ class DhLotto645:
         games: List["DhLotto645.Game"] = field(default_factory=lambda: [])
 
         def to_dict(self) -> Dict:
-            """데터 사전 형식으로 변환합니다."""
+            """ë°í„° ì‚¬ì „ í˜•ì‹ìœ¼ë¡œ ë³€í™˜í•©ë‹ˆë‹¤."""
             return {
                 "round_no": self.round_no,
                 "barcode": self.barcode,
@@ -112,7 +112,7 @@ class DhLotto645:
 
     @dataclass
     class BuyHistoryData:
-        """로또 purchase history 나타내는 데터 클래스입니다."""
+        """ë¡œë˜ purchase history ë‚˜íƒ€ë‚´ëŠ” ë°í„° í´ëž˜ìŠ¤ìž…ë‹ˆë‹¤."""
 
         round_no: int
         barcode: str
@@ -120,11 +120,11 @@ class DhLotto645:
         games: List["DhLotto645.Game"] = field(default_factory=lambda: [])
 
     def __init__(self, client: DhLotteryClient):
-        """DhLotto645 클래스 초기화합니다."""
+        """DhLotto645 í´ëž˜ìŠ¤ ì´ˆê¸°í™”í•©ë‹ˆë‹¤."""
         self.client = client
 
     async def async_get_round_info(self, round_no: Optional[int] = None) -> WinningData:
-        """특정 round 로또 round 정보 져옵니다."""
+        """íŠ¹ì • round ë¡œë˜ round ì •ë³´ ì ¸ì˜µë‹ˆë‹¤."""
         params = {
             "_": int(datetime.datetime.now().timestamp() * 1000),
         }
@@ -152,13 +152,13 @@ class DhLotto645:
         )
 
     async def async_get_latest_round_no(self) -> int:
-        """최신 로또 round number 져옵니다."""
+        """ìµœì‹  ë¡œë˜ round number ì ¸ì˜µë‹ˆë‹¤."""
         latest_round = await self.async_get_round_info()
         return latest_round.round_no
 
     async def async_buy(self, items: List[Slot]) -> BuyData:
         """
-        로또 purchase합니다.
+        ë¡œë˜ purchaseí•©ë‹ˆë‹¤.
         example: {"loginYn":"Y","result":{"oltInetUserId":"006094875","issueTime":"17:55:27","issueDay":"2024/05/28",
         "resultCode":"100","barCode4":"63917","barCode5":"56431","barCode6":"42167","barCode1":"59865","barCode2":"36399",
         "resultMsg":"SUCCESS","barCode3":"04155","buyRound":"1122","arrGameChoiceNum":["A|09|12|30|33|35|433"],
@@ -168,15 +168,15 @@ class DhLotto645:
         _LOGGER.debug(f"Buy Lotto, items: {items}")
 
         def deduplicate_numbers(_items: List["DhLotto645.Slot"]) -> None:
-            """purchase number서 중복 제거합니다."""
+            """purchase numberì„œ ì¤‘ë³µ ì œê±°í•©ë‹ˆë‹¤."""
             for _item in _items:
                 _item.numbers = list(set(_item.numbers))
 
         async def _verify_and_get_buy_count(_items: List["DhLotto645.Slot"]) -> int:
-            """purchase 능한지 검증하고, purchase 능한 로또 개수 반환합니다."""
+            """purchase ëŠ¥í•œì§€ ê²€ì¦í•˜ê³ , purchase ëŠ¥í•œ ë¡œë˜ ê°œìˆ˜ ë°˜í™˜í•©ë‹ˆë‹¤."""
 
             def _check_buy_time() -> None:
-                """purchase 능한 시간인지 확인합니다."""
+                """purchase ëŠ¥í•œ ì‹œê°„ì¸ì§€ í™•ì¸í•©ë‹ˆë‹¤."""
                 _now = datetime.datetime.now()
                 if _now.hour < 6:
                     raise DhLotto645Error(
@@ -188,7 +188,7 @@ class DhLotto645:
                     )
 
             def _check_item_count() -> None:
-                """purchase 정보 항목 개수 확인합니다."""
+                """purchase ì •ë³´ í•­ëª© ê°œìˆ˜ í™•ì¸í•©ë‹ˆë‹¤."""
                 if len(_items) == 0:
                     raise DhLotto645Error("[ERROR] purchase  number  .")
                 if len(_items) > 5:
@@ -203,7 +203,7 @@ class DhLotto645:
                         )
 
             async def _async_check_weekly_limit() -> int:
-                """주간 purchase 제한 확인합니다."""
+                """ì£¼ê°„ purchase ì œí•œ í™•ì¸í•©ë‹ˆë‹¤."""
                 _history_items = await self.client.async_get_buy_list('LO40')
                 __this_week_buy_count = sum(
                     [
@@ -217,7 +217,7 @@ class DhLotto645:
                 return __this_week_buy_count
 
             async def _async_check_balance() -> None:
-                """Balance 충분한지 확인합니다."""
+                """Balance ì¶©ë¶„í•œì§€ í™•ì¸í•©ë‹ˆë‹¤."""
                 if _buy_count * 1000 > _balance.purchase_available:
                     raise DhLotto645Error(
                         f"[ERROR] Balance . (Balance: {_balance.purchase_available})"
@@ -238,14 +238,14 @@ class DhLotto645:
             return _buy_count
 
         async def get_user_ready_socket() -> str:
-            """유저 준비 소켓 져옵니다."""
+            """ìœ ì € ì¤€ë¹„ ì†Œì¼“ ì ¸ì˜µë‹ˆë‹¤."""
             _resp = await self.client.session.post(
                 url="https://ol.dhlottery.co.kr/olotto/game/egovUserReadySocket.json"
             )
             return json.loads(await _resp.text())["ready_ip"]
 
         def make_param(tickets: List["DhLotto645.Slot"]) -> str:
-            """로또 purchase 정보 생성합니다."""
+            """ë¡œë˜ purchase ì •ë³´ ìƒì„±í•©ë‹ˆë‹¤."""
             return json.dumps(
                 [
                     {
@@ -267,7 +267,7 @@ class DhLotto645:
             )
 
         def parse_result(result: Dict) -> DhLotto645.BuyData:
-            """purchase 결과 파싱합니다.
+            """purchase ê²°ê³¼ íŒŒì‹±í•©ë‹ˆë‹¤.
             example: ["A|01|02|04|27|39|443", "B|11|23|25|27|28|452"]
             """
             return DhLotto645.BuyData(
@@ -292,6 +292,8 @@ class DhLotto645:
             live_round = str(await self.async_get_latest_round_no() + 1)
             direct = (await get_user_ready_socket())
             param = make_param(buy_items)
+            _LOGGER.info(f"[PURCHASE] Sending to server - param: {param}")
+            _LOGGER.info(f"[PURCHASE] buy_items before param: {[(item.mode, item.numbers) for item in buy_items]}")
             resp = await self.client.session.post(
                 url="https://ol.dhlottery.co.kr/olotto/game/execBuy.do",
                 data={
@@ -318,12 +320,12 @@ class DhLotto645:
             ) from ex
 
     async def async_get_buy_history_this_week(self) -> list[BuyHistoryData]:
-        """recent 1주일간 purchase history query합니다."""
+        """recent 1ì£¼ì¼ê°„ purchase history queryí•©ë‹ˆë‹¤."""
 
         async def async_get_receipt(
             _order_no: str, _barcode: str
         ) -> List[DhLotto645.Game]:
-            """영수증 가져옵니다."""
+            """ì˜ìˆ˜ì¦ ê°€ì ¸ì˜µë‹ˆë‹¤."""
             _resp = await self.client.async_get_with_login('mypage/lotto645TicketDetail.do',
                 params={"ntslOrdrNo": _order_no, "barcd": _barcode, "_": int(datetime.datetime.now().timestamp() * 1000)},
             )
