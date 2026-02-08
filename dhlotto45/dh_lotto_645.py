@@ -249,12 +249,7 @@ class DhLotto645:
             return json.dumps(
                 [
                     {
-                        "genType": (
-                            DhLotto645SelMode.SEMI_AUTO
-                            if t.mode == DhLotto645SelMode.MANUAL
-                            and len(t.numbers) != 6
-                            else t.mode
-                        ).to_value(),
+                        "genType": t.mode.to_value(),
                         "arrGameChoiceNum": (
                             None
                             if t.mode == DhLotto645SelMode.AUTO
