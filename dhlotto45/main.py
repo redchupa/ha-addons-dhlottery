@@ -1100,8 +1100,9 @@ async def update_sensors():
                     })
                     
                     # Publish individual game sensors from all purchases (up to 5 total games)
+                    # Reverse history to show oldest games first (Game 1 = oldest)
                     all_games = []
-                    for purchase in history:
+                    for purchase in reversed(history):
                         for game in purchase.games:
                             all_games.append({
                                 'game': game,
@@ -1217,18 +1218,6 @@ async def update_sensors():
                                 "friendly_name": f"Game {i} Result",
                                 "icon": "mdi:alert-circle-outline",
                             })
-                    
-                    # Count pending purchases
-                    pending_count = sum(1 for h in history if "not" in str(h.result).lower() or "drawn" not in str(h.result).lower())
-                    total_games = sum(len(h.games) for h in history)
-                    
-                    # Publish purchase history count
-                    await publish_sensor("lotto45_purchase_history_count", len(history), {
-                        "total_games": total_games,
-                        "pending_count": pending_count,
-                        "friendly_name": "Purchase History Count",
-                        "icon": "mdi:counter",
-                    })
                     
                     # Publish weekly purchase count sensor (based on Pending games)
                     weekly_limit = 5
