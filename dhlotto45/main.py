@@ -490,7 +490,6 @@ async def update_sensors_for_account(account: AccountData):
             await account.client.async_login()
         except Exception as e:
             logger.error(f"[SENSOR][{username}] Login failed: {e}")
-            # Publish error sensor and skip update
             await publish_sensor_for_account(account, "lotto45_login_error", str(e)[:255], {
                 "error": str(e),
                 "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -672,10 +671,12 @@ async def update_sensors_for_account(account: AccountData):
                         round_no = game_info['round_no']
                         numbers_str = ", ".join(map(str, game.numbers))
                         
-                        # Game numbers sensor
+                        # Game numbers sensor - ADD KOREAN KEYS HERE!
                         await publish_sensor_for_account(account, f"lotto45_game_{i}", numbers_str, {
                             "slot": game.slot,
+                            "슬롯": game.slot,  # 한글 키 추가
                             "mode": str(game.mode),
+                            "선택": str(game.mode),  # 한글 키 추가 (자동/수동/반자동)
                             "numbers": game.numbers,
                             "round_no": round_no,
                             "result": game_info['result'],
@@ -760,7 +761,9 @@ async def update_sensors_for_account(account: AccountData):
                         # Empty slot - create placeholder
                         await publish_sensor_for_account(account, f"lotto45_game_{i}", "Empty", {
                             "slot": "-",
+                            "슬롯": "-",  # 한글 키
                             "mode": "-",
+                            "선택": "-",  # 한글 키
                             "numbers": [],
                             "round_no": 0,
                             "result": "-",
@@ -923,7 +926,7 @@ async def health():
 async def list_accounts():
     """List accounts"""
     result = []
-    for username, account in accounts.items():
+    for username, account in accounts.values():
         result.append({
             "username": username,
             "enabled": account.enabled,
