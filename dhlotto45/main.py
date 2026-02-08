@@ -346,14 +346,13 @@ async def execute_button_purchase(button_id: str):
                     await publish_purchase_error(error_msg)
                     return
                 
-                # Validate each part
-                validated_numbers = []
-                auto_positions = []
+                # Validate each part and collect manual numbers only
+                manual_numbers = []
+                auto_count = 0
                 
                 for i, part in enumerate(parts):
                     if part.lower() == "auto":
-                        auto_positions.append(i)
-                        validated_numbers.append(None)  # Will be filled later
+                        auto_count += 1
                     else:
                         # Try to convert to integer
                         try:
@@ -372,7 +371,7 @@ async def execute_button_purchase(button_id: str):
                                 await publish_purchase_error(error_msg)
                                 return
                             
-                            validated_numbers.append(num)
+                            manual_numbers.append(num)
                         except ValueError:
                             # Check if it's a float
                             try:
@@ -387,41 +386,37 @@ async def execute_button_purchase(button_id: str):
                                 await publish_purchase_error(error_msg)
                                 return
                 
-                # Fill auto positions with random numbers
-                if auto_positions:
-                    # Get already used numbers
-                    used_numbers = set([n for n in validated_numbers if n is not None])
-                    
-                    # Generate available numbers
-                    available_numbers = [n for n in range(1, 46) if n not in used_numbers]
-                    
-                    # Check if we have enough available numbers
-                    if len(available_numbers) < len(auto_positions):
-                        error_msg = "Too many duplicate numbers, cannot generate auto numbers"
-                        logger.error(f"[PURCHASE] {error_msg}")
-                        await publish_purchase_error(error_msg)
-                        return
-                    
-                    # Fill auto positions
-                    random_numbers = random.sample(available_numbers, len(auto_positions))
-                    for i, pos in enumerate(auto_positions):
-                        validated_numbers[pos] = random_numbers[i]
-                    
-                    logger.info(f"[PURCHASE] Auto positions filled: {auto_positions} -> {random_numbers}")
-                
-                # Check for duplicates
-                if len(set(validated_numbers)) != 6:
-                    error_msg = "Duplicate numbers found"
+                # Check for duplicates in manual numbers
+                if len(manual_numbers) != len(set(manual_numbers)):
+                    error_msg = "Duplicate numbers found in manual input"
                     logger.error(f"[PURCHASE] {error_msg}")
                     await publish_purchase_error(error_msg)
                     return
                 
-                # Sort numbers
-                final_numbers = sorted(validated_numbers)
-                logger.info(f"[PURCHASE] Final validated numbers: {final_numbers}")
+                # Determine mode and prepare slot
+                if auto_count == 0:
+                    # All manual - must have exactly 6 numbers
+                    if len(manual_numbers) != 6:
+                        error_msg = f"Must provide exactly 6 numbers for full manual mode (current: {len(manual_numbers)})"
+                        logger.error(f"[PURCHASE] {error_msg}")
+                        await publish_purchase_error(error_msg)
+                        return
+                    mode = DhLotto645SelMode.MANUAL
+                    final_numbers = sorted(manual_numbers)
+                    logger.info(f"[PURCHASE] Mode: MANUAL, Numbers: {final_numbers}")
+                elif auto_count == 6:
+                    # All auto
+                    mode = DhLotto645SelMode.AUTO
+                    final_numbers = []
+                    logger.info(f"[PURCHASE] Mode: AUTO")
+                else:
+                    # Semi-auto - send only manual numbers, server will fill the rest
+                    mode = DhLotto645SelMode.SEMI_AUTO
+                    final_numbers = sorted(manual_numbers)
+                    logger.info(f"[PURCHASE] Mode: SEMI_AUTO, Manual numbers: {final_numbers}, Auto count: {auto_count}")
                 
-                # Create manual slot
-                slots = [DhLotto645.Slot(mode=DhLotto645SelMode.MANUAL, numbers=final_numbers)]
+                # Create slot
+                slots = [DhLotto645.Slot(mode=mode, numbers=final_numbers)]
                 
             except Exception as e:
                 error_msg = f"Error processing input: {str(e)}"
@@ -846,6 +841,46 @@ async def update_sensors():
             "friendly_name": "Lotto Balance",
             "icon": "mdi:wallet",
         })
+        
+        # Weekly purchase limit sensors
+        try:
+            # Get this week's purchase history
+            history_items = await client.async_get_buy_list('LO40')
+            this_week_buy_count = sum([
+                item.get("prchsQty", 0)
+                for item in history_items
+                if item.get("ltWnResult") == ""  # Pending draws only
+            ])
+            
+            weekly_limit = 5
+            remaining_count = max(0, weekly_limit - this_week_buy_count)
+            
+            # Weekly purchase count
+            await publish_sensor("lotto45_weekly_purchase_count", this_week_buy_count, {
+                "friendly_name": "Weekly Purchase Count",
+                "unit_of_measurement": "games",
+                "icon": "mdi:counter",
+            })
+            
+            # Weekly remaining
+            await publish_sensor("lotto45_weekly_remaining", remaining_count, {
+                "friendly_name": "Weekly Remaining Purchases",
+                "unit_of_measurement": "games",
+                "icon": "mdi:ticket-confirmation" if remaining_count > 0 else "mdi:close-circle",
+            })
+            
+            # Weekly limit (fixed)
+            await publish_sensor("lotto45_weekly_limit", weekly_limit, {
+                "friendly_name": "Weekly Purchase Limit",
+                "unit_of_measurement": "games",
+                "icon": "mdi:numeric-5-circle",
+            })
+            
+            logger.info(f"Weekly purchases: {this_week_buy_count}/{weekly_limit} (remaining: {remaining_count})")
+            
+        except Exception as e:
+            logger.warning(f"Failed to get weekly purchase count: {e}")
+
         
         # 2. Update lotto statistics
         if config["enable_lotto645"] and analyzer:
