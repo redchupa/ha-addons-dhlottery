@@ -214,7 +214,7 @@ class DhLotto645:
                     ]
                 )
                 if __this_week_buy_count >= 5:
-                    raise DhLotto645Error("[ERROR] Weekly purchase limit reached (5 games).")
+                    raise DhLotto645Error("[ERROR] 주간 구매 한도(5게임)에 도달했습니다. 다음 주에 다시 구매해주세요.")
                 return __this_week_buy_count
 
             async def _async_check_balance() -> None:
