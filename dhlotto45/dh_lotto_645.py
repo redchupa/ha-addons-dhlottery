@@ -157,7 +157,7 @@ class DhLotto645:
         latest_round = await self.async_get_round_info()
         return latest_round.round_no
 
-    async def async_buy(self, items: List[Slot]) -> BuyData:
+    async def async_buy(self, items: List[Slot], max_games: Optional[int] = None) -> BuyData:
         """
         Purchase lottery tickets.
         example: {"loginYn":"Y","result":{"oltInetUserId":"006094875","issueTime":"17:55:27","issueDay":"2024/05/28",
@@ -235,6 +235,8 @@ class DhLotto645:
 
             _balance = await self.client.async_get_balance()
             _buy_count = min(len(items), _available_count)
+            if max_games is not None:
+                _buy_count = min(_buy_count, max_games)  # 수동 1게임 등 최대 장수 제한
             await _async_check_balance()
             return _buy_count
 

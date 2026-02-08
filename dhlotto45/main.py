@@ -8,6 +8,7 @@ v2.0.0 - Multi-account support with full sensor suite
 import os
 import asyncio
 import logging
+import time
 from typing import Optional, Dict, List
 from datetime import date, datetime, timezone, timedelta
 from contextlib import asynccontextmanager
@@ -60,6 +61,7 @@ config = {
 
 # Global variables
 accounts: Dict[str, AccountData] = {}
+_last_purchase_time: Dict[tuple, float] = {}  # (username, button_id) -> timestamp, 중복 실행 방지
 mqtt_client: Optional[MQTTDiscovery] = None
 event_loop: Optional[asyncio.AbstractEventLoop] = None
 
@@ -266,10 +268,17 @@ def on_button_command(client_mqtt, userdata, message):
 
 
 async def execute_button_purchase(account: AccountData, button_id: str):
-    """Execute purchase for account"""
+    """Execute purchase for account. 수동 1게임은 정확히 1장만 구매."""
     username = account.username
     logger.info(f"[PURCHASE][{username}] Starting purchase: {button_id}")
-    
+
+    # 버튼 중복 실행 방지: 동일 계정+버튼 15초 이내 재호출 시 스킵
+    key = (username, button_id)
+    now = time.monotonic()
+    if key in _last_purchase_time and (now - _last_purchase_time[key]) < 15:
+        logger.warning(f"[PURCHASE][{username}] Ignored duplicate press: {button_id} (within 15s)")
+        return
+
     if not account.lotto_645:
         logger.error(f"[PURCHASE][{username}] Lotto 645 not enabled")
         return
@@ -318,7 +327,7 @@ async def execute_button_purchase(account: AccountData, button_id: str):
                     mode = DhLotto645SelMode.SEMI_AUTO
                     final_numbers = sorted(manual_numbers)
                 
-                slots = [DhLotto645.Slot(mode=mode, numbers=final_numbers)]
+                slots = [DhLotto645.Slot(mode=mode, numbers=final_numbers)]  # 수동 1게임 = 1슬롯
                 
             except Exception as e:
                 await publish_purchase_error(account, f"Error: {str(e)}")
@@ -327,13 +336,14 @@ async def execute_button_purchase(account: AccountData, button_id: str):
             count = 5 if button_id == "buy_auto_5" else 1
             slots = [DhLotto645.Slot(mode=DhLotto645SelMode.AUTO, numbers=[]) for _ in range(count)]
         
+        max_games = 1 if button_id == "buy_manual" else None  # 수동 1게임은 정확히 1장만
         logger.info(f"[PURCHASE][{username}] Executing: {len(slots)} game(s)")
-        result = await account.lotto_645.async_buy(slots)
+        result = await account.lotto_645.async_buy(slots, max_games=max_games)
         
         logger.info(f"[PURCHASE][{username}] Success! Round: {result.round_no}")
-        
+        _last_purchase_time[(username, button_id)] = time.monotonic()
         await update_sensors_for_account(account)
-        
+
     except DhLotto645Error as e:
         # 주간 한도 등 예상 가능한 구매 오류: 트레이스백 없이 로그 후 MQTT 센서로 전달
         logger.warning(f"[PURCHASE][{username}] Purchase rejected: {e}")
