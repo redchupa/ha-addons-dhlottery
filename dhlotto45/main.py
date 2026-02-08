@@ -130,15 +130,16 @@ def _get_lotto645_item(data: dict) -> dict:
 def is_purchase_available_now() -> bool:
     """
     동행복권 구매 가능 시간(KST)이면 True.
-    weekdays: 06:00-24:00, saturday: 06:00-20:00, sunday: 06:00-24:00
+    - 평일/일: 06:00~24:00 (구매 불가: 00:00~05:59)
+    - 토요일: 06:00~20:00 (구매 불가: 20:00~06:00 = 20:00~23:59 + 00:00~05:59)
     """
     now = datetime.now(_TZ_KST)
     wd = now.weekday()  # 0=Mon .. 6=Sun
     minutes = now.hour * 60 + now.minute  # 06:00 = 360, 20:00 = 1200
-    if minutes < 360:  # 00:00 ~ 05:59 모든 요일 구매 불가
+    if minutes < 360:  # 00:00~05:59 모든 요일 구매 불가
         return False
-    if wd == 5:  # Saturday: 20:00~24:00 구매 불가
-        if minutes >= 1200:
+    if wd == 5:  # 토요일: 20:00~06:00 구매 불가 → 20:00 이상이면 불가
+        if minutes >= 1200:  # 20:00~23:59
             return False
     return True
 
