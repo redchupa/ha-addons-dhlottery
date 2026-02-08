@@ -11,12 +11,13 @@ import logging
 from typing import Optional, Dict, List
 from datetime import date, datetime, timezone
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-from dh_lottery_client import DhLotteryClient
-from dh_lotto_645 import DhLotto645, DhLotto645SelMode
+from dh_lottery_client import DhLotteryClient, DhLotteryError, DhLotteryLoginError
+from dh_lotto_645 import DhLotto645, DhLotto645SelMode, DhLotto645Error
 from dh_lotto_analyzer import DhLottoAnalyzer
 from mqtt_discovery import MQTTDiscovery, publish_sensor_mqtt
 
@@ -310,6 +311,10 @@ async def execute_button_purchase(account: AccountData, button_id: str):
         
         await update_sensors_for_account(account)
         
+    except DhLotto645Error as e:
+        # 주간 한도 등 예상 가능한 구매 오류: 트레이스백 없이 로그 후 MQTT 센서로 전달
+        logger.warning(f"[PURCHASE][{username}] Purchase rejected: {e}")
+        await publish_purchase_error(account, str(e))
     except Exception as e:
         logger.error(f"[PURCHASE][{username}] Failed: {e}", exc_info=True)
         await publish_purchase_error(account, str(e))
@@ -475,6 +480,24 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Lotto 45 Multi", version="2.0.0", lifespan=lifespan)
+
+# CORS: 모바일 앱 및 외부/Ingress 접근 지원
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["X-Ingress-Request"],
+)
+
+
+def is_ingress_request(request: Request) -> bool:
+    """Home Assistant Ingress 경유 접근 여부 (Supervisor가 설정하는 헤더로 판단)"""
+    return (
+        request.headers.get("X-Remote-User-Id") is not None
+        or request.headers.get("X-Remote-User-Name") is not None
+    )
 
 
 async def background_tasks_for_account(account: AccountData):
@@ -927,6 +950,28 @@ async def update_sensors_for_account(account: AccountData):
         
         logger.info(f"[SENSOR][{username}] Updated successfully")
         
+    except DhLotteryLoginError as e:
+        if account.client:
+            account.client.logged_in = False
+        msg = str(e)[:255]
+        await publish_sensor_for_account(account, "lotto45_login_error", msg, {
+            "error": str(e),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "friendly_name": "로그인 오류",
+            "icon": "mdi:account-alert",
+        })
+        logger.warning(f"[SENSOR][{username}] Login/API failed: {e}")
+    except DhLotteryError as e:
+        if account.client:
+            account.client.logged_in = False
+        msg = str(e)[:255]
+        await publish_sensor_for_account(account, "lotto45_login_error", msg, {
+            "error": str(e),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "friendly_name": "로그인/API 오류",
+            "icon": "mdi:account-alert",
+        })
+        logger.warning(f"[SENSOR][{username}] Update failed (API): {e}")
     except Exception as e:
         logger.error(f"[SENSOR][{username}] Update failed: {e}", exc_info=True)
 
@@ -976,20 +1021,24 @@ async def publish_sensor_for_account(account: AccountData, entity_id: str, state
 
 
 @app.get("/", response_class=HTMLResponse)
-async def root():
-    """Main page"""
+async def root(request: Request):
+    """Main page. Ingress 경유 시 배지 표시."""
     accounts_html = "<ul>"
     for username, account in accounts.items():
         status = "✅" if account.client and account.client.logged_in else "❌"
         enabled = "✅" if account.enabled else "❌"
         accounts_html += f"<li><strong>{username}</strong>: {status} (Enabled: {enabled})</li>"
     accounts_html += "</ul>"
-    
+    ingress_badge = (
+        '<span style="background:#0d47a1;color:#fff;padding:2px 8px;border-radius:4px;font-size:12px;">Ingress</span>'
+        if is_ingress_request(request) else ""
+    )
     return f"""
     <!DOCTYPE html>
     <html>
         <head>
             <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
             <title>Lotto 45 v2.0.0</title>
             <style>
                 body {{ font-family: Arial; margin: 40px; }}
@@ -997,7 +1046,7 @@ async def root():
             </style>
         </head>
         <body>
-            <h1>🎰 Lotto 45 <span style="color:#666;">v2.0.0 Multi-Account</span></h1>
+            <h1>🎰 Lotto 45 <span style="color:#666;">v2.0.0 Multi-Account</span> {ingress_badge}</h1>
             <div class="info">
                 <h2>Accounts ({len(accounts)})</h2>
                 {accounts_html}
@@ -1011,26 +1060,35 @@ async def root():
     """
 
 
+@app.get("/api/ingress")
+async def api_ingress(request: Request):
+    """현재 요청이 Home Assistant Ingress 경유인지 반환 (모바일/외부 연동 시 참고)."""
+    return {"ingress": is_ingress_request(request)}
+
+
 @app.get("/health")
-async def health():
-    """Health"""
+async def health(request: Request):
+    """Health check. Ingress 경유 접근 시 ingress: true 포함."""
     accounts_status = {}
     logged_in_count = 0
-    
+
     for username, account in accounts.items():
-        is_logged_in = account.client.logged_in if account.client else False
+        is_logged_in = bool(account.client and getattr(account.client, "logged_in", False))
         if is_logged_in:
             logged_in_count += 1
-            
         accounts_status[username] = {
             "logged_in": is_logged_in,
             "enabled": account.enabled,
             "status": "✅ Active" if is_logged_in else "❌ Login Failed",
         }
-    
+
+    # 계정이 없으면 ok (초기 상태), 있으면 최소 1개 로그인 시 ok
+    status = "ok" if (len(accounts) == 0 or logged_in_count > 0) else "degraded"
+
     return {
-        "status": "ok" if logged_in_count > 0 else "degraded",
+        "status": status,
         "version": "2.0.0",
+        "ingress": is_ingress_request(request),
         "accounts": accounts_status,
         "total_accounts": len(accounts),
         "logged_in_accounts": logged_in_count,
@@ -1042,7 +1100,7 @@ async def health():
 async def list_accounts():
     """List accounts"""
     result = []
-    for username, account in accounts.values():
+    for username, account in accounts.items():
         result.append({
             "username": username,
             "enabled": account.enabled,
