@@ -686,7 +686,7 @@ async def update_sensors_for_account(account: AccountData):
                         
                         # Game result sensor
                         try:
-                            result_text = "Pending"
+                            result_text = "미추첨"
                             result_icon = "mdi:clock-outline"
                             result_color = "grey"
                             matching_count = 0
@@ -706,27 +706,27 @@ async def update_sensors_for_account(account: AccountData):
                                 rank = check_result['rank']
                                 
                                 if rank == 1:
-                                    result_text = "1st Prize"
+                                    result_text = "1등 당첨"
                                     result_icon = "mdi:trophy"
                                     result_color = "gold"
                                 elif rank == 2:
-                                    result_text = "2nd Prize"
+                                    result_text = "2등 당첨"
                                     result_icon = "mdi:medal"
                                     result_color = "silver"
                                 elif rank == 3:
-                                    result_text = "3rd Prize"
+                                    result_text = "3등 당첨"
                                     result_icon = "mdi:medal-outline"
                                     result_color = "bronze"
                                 elif rank == 4:
-                                    result_text = "4th Prize"
+                                    result_text = "4등 당첨"
                                     result_icon = "mdi:currency-krw"
                                     result_color = "blue"
                                 elif rank == 5:
-                                    result_text = "5th Prize"
+                                    result_text = "5등 당첨"
                                     result_icon = "mdi:cash"
                                     result_color = "green"
                                 else:
-                                    result_text = "No Win"
+                                    result_text = "낙첨"
                                     result_icon = "mdi:close-circle-outline"
                                     result_color = "red"
                             else:
