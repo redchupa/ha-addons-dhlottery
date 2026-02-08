@@ -18,9 +18,9 @@ class DhLotto645Error(DhLotteryError):
 class DhLotto645SelMode(StrEnum):
     """ë¡œë˜ purchase ëª¨ë“œ ë‚˜íƒ€ë‚´ëŠ” ì—´ê±°í˜•ìž…ë‹ˆë‹¤."""
 
-    AUTO = ""
-    MANUAL = ""
-    SEMI_AUTO = ""
+    AUTO = "auto"
+    MANUAL = "manual"
+    SEMI_AUTO = "semi_auto"
 
     @staticmethod
     def value_of(value: str) -> "DhLotto645SelMode":
@@ -281,7 +281,9 @@ class DhLotto645:
             )
 
         try:
+            _LOGGER.info(f"[PURCHASE] Before deduplicate - items: {[(item.mode, item.numbers) for item in items]}")
             deduplicate_numbers(items)
+            _LOGGER.info(f"[PURCHASE] After deduplicate - items: {[(item.mode, item.numbers) for item in items]}")
             buy_count = await _verify_and_get_buy_count(items)
             buy_items = items[:buy_count]
             live_round = str(await self.async_get_latest_round_no() + 1)

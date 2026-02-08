@@ -846,10 +846,12 @@ async def update_sensors():
         try:
             # Get this week's purchase history
             history_items = await client.async_get_buy_list('LO40')
+            
+            # Count ALL purchases this week (pending or drawn)
+            # ltWnResult values: "" (pending), "낙첨" (no win), "1등" (1st prize), etc.
             this_week_buy_count = sum([
                 item.get("prchsQty", 0)
                 for item in history_items
-                if item.get("ltWnResult") == ""  # Pending draws only
             ])
             
             weekly_limit = 5
