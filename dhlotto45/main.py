@@ -842,6 +842,16 @@ async def update_sensors():
             "icon": "mdi:wallet",
         })
         
+        # Purchase available time sensor (static information)
+        await publish_sensor("lotto45_purchase_available_time", 
+            "weekdays: 06:00-24:00, saturday: 06:00-20:00, sunday: 06:00-24:00", {
+            "weekdays": "06:00-24:00",
+            "saturday": "06:00-20:00",
+            "sunday": "06:00-24:00",
+            "friendly_name": "Purchase Available Time",
+            "icon": "mdi:clock-time-eight",
+        })
+        
         
         # 2. Update lotto statistics
         if config["enable_lotto645"] and analyzer:
