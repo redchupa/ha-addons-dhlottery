@@ -135,9 +135,9 @@ async def register_buttons_for_account(account: AccountData):
     
     # Buttons
     for button_id, button_name, icon in [
-        ("buy_auto_1", "Buy 1 Auto Game", "mdi:ticket-confirmation"),
-        ("buy_auto_5", "Buy 5 Auto Games", "mdi:ticket-confirmation-outline"),
-        ("buy_manual", "Buy 1 Manual Game", "mdi:hand-pointing-right"),
+        ("buy_auto_1", "1 게임 자동 구매", "mdi:ticket-confirmation"),
+        ("buy_auto_5", "5 게임 자동 구매", "mdi:ticket-confirmation-outline"),
+        ("buy_manual", "1 게임 수동 구매", "mdi:hand-pointing-right"),
     ]:
         button_topic = f"homeassistant/button/{mqtt_client.topic_prefix}_{username}_{button_id}/command"
         mqtt_client.publish_button_discovery(
@@ -156,7 +156,7 @@ async def register_buttons_for_account(account: AccountData):
     
     mqtt_client.publish_input_text_discovery(
         input_id="manual_numbers",
-        name="Manual Numbers Input",
+        name="수동 번호 입력 (쉼표로 구분, 자동은 auto)",
         state_topic=input_state_topic,
         command_topic=input_command_topic,
         username=username,
@@ -567,7 +567,7 @@ async def update_sensors_for_account(account: AccountData):
                 
                 # Bonus
                 await publish_sensor_for_account(account, "lotto645_bonus", _safe_int(result_item.get("bnsWnNo")), {
-                    "friendly_name": "보너스 번호",
+                    "friendly_name": "로또 보너스 번호",
                     "icon": "mdi:star-circle",
                 })
                 
@@ -589,7 +589,7 @@ async def update_sensors_for_account(account: AccountData):
                 draw_date = _parse_yyyymmdd(result_item.get("ltRflYmd"))
                 if draw_date:
                     await publish_sensor_for_account(account, "lotto645_draw_date", draw_date, {
-                        "friendly_name": "추첨일",
+                        "friendly_name": "로또 추첨일",
                         "icon": "mdi:calendar",
                         "device_class": "date",
                     })
@@ -606,7 +606,7 @@ async def update_sensors_for_account(account: AccountData):
                 for rank in range(1, 6):
                     await publish_sensor_for_account(account, f"lotto645_{['first','second','third','fourth','fifth'][rank-1]}_prize",
                         _safe_int(item.get(f"rnk{rank}WnAmt")), {
-                        "friendly_name": f"{rank}등 당첨금",
+                        "friendly_name": f"로또 {rank}등 당첨금",
                         "unit_of_measurement": "KRW",
                         "total_amount": _safe_int(item.get(f"rnk{rank}SumWnAmt")),
                         "winners": _safe_int(item.get(f"rnk{rank}WnNope")),
@@ -637,7 +637,7 @@ async def update_sensors_for_account(account: AccountData):
                         "result": latest_purchase.result,
                         "games": games_info,
                         "games_count": len(latest_purchase.games),
-                        "friendly_name": "최근 구매",
+                        "friendly_name": "로또 최근 구매 회차",
                         "icon": "mdi:receipt-text",
                     })
                     
