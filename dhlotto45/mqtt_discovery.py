@@ -172,7 +172,7 @@ class MQTTDiscovery:
             "device": {
                 "identifiers": [device_identifier],
                 "name": device_name,
-                "manufacturer": "우석만",
+                "manufacturer": "우*만",
                 "model": "토스1000-1261-7813",
                 "sw_version": "26.02.08",
             },
