@@ -869,7 +869,7 @@ async def update_sensors_for_account(account: AccountData):
                     "probability_decimal": prob_1st,
                     "probability_fraction": "1/8,145,060",
                     "unit_of_measurement": "%",
-                    "friendly_name": "1등 당첨 확률",
+                    "friendly_name": "로또 1등 당첨 확률",
                     "icon": "mdi:trophy",
                 })
                 
@@ -879,7 +879,7 @@ async def update_sensors_for_account(account: AccountData):
                     "probability_decimal": prob_2nd,
                     "probability_fraction": "6/8,145,060",
                     "unit_of_measurement": "%",
-                    "friendly_name": "2등 당첨 확률",
+                    "friendly_name": "로또 2등 당첨 확률",
                     "icon": "mdi:medal",
                 })
                 
@@ -889,7 +889,7 @@ async def update_sensors_for_account(account: AccountData):
                     "probability_decimal": prob_3rd,
                     "probability_fraction": "234/8,145,060",
                     "unit_of_measurement": "%",
-                    "friendly_name": "3등 당첨 확률",
+                    "friendly_name": "로또 3등 당첨 확률",
                     "icon": "mdi:medal-outline",
                 })
                 
@@ -899,7 +899,7 @@ async def update_sensors_for_account(account: AccountData):
                     "probability_decimal": prob_4th,
                     "probability_fraction": "11,115/8,145,060",
                     "unit_of_measurement": "%",
-                    "friendly_name": "4등 당첨 확률",
+                    "friendly_name": "로또 4등 당첨 확률",
                     "icon": "mdi:currency-krw",
                 })
                 
@@ -909,7 +909,7 @@ async def update_sensors_for_account(account: AccountData):
                     "probability_decimal": prob_5th,
                     "probability_fraction": "185,220/8,145,060",
                     "unit_of_measurement": "%",
-                    "friendly_name": "5등 당첨 확률",
+                    "friendly_name": "로또 5등 당첨 확률",
                     "icon": "mdi:cash",
                 })
                 
