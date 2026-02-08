@@ -12,11 +12,11 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class DhLotto645Error(DhLotteryError):
-    """DH Lotto 645 ì˜ˆì™¸ í´ëž˜ìŠ¤ìž…ë‹ˆë‹¤."""
+    """DH Lotto 645 exception class."""
 
 
 class DhLotto645SelMode(StrEnum):
-    """ë¡œë˜ purchase ëª¨ë“œ ë‚˜íƒ€ë‚´ëŠ” ì—´ê±°í˜•ìž…ë‹ˆë‹¤."""
+    """Lottery purchase mode enumeration."""
 
     AUTO = "auto"
     MANUAL = "manual"
@@ -24,7 +24,7 @@ class DhLotto645SelMode(StrEnum):
 
     @staticmethod
     def value_of(value: str) -> "DhLotto645SelMode":
-        """ë¡œë˜ purchase ëª¨ë“œ ê°’ ì ¸ì˜µë‹ˆë‹¤."""
+        """Convert value to lottery purchase mode."""
         if value == "1":
             return DhLotto645SelMode.MANUAL
         if value == "2":
@@ -34,7 +34,7 @@ class DhLotto645SelMode(StrEnum):
         raise ValueError(f"Invalid value: {value}")
 
     def to_value(self) -> str:
-        """ë¡œë˜ purchase ëª¨ë“œ ê°’ ì ¸ì˜µë‹ˆë‹¤."""
+        """Convert lottery purchase mode to value."""
         if self == DhLotto645SelMode.AUTO:
             return "0"
         if self == DhLotto645SelMode.MANUAL:
@@ -45,32 +45,33 @@ class DhLotto645SelMode(StrEnum):
 
     @staticmethod
     def value_of_text(text: str) -> "DhLotto645SelMode":
-        """ë¡œë˜ purchase ëª¨ë“œ ê°’ ì ¸ì˜µë‹ˆë‹¤."""
-        if "" in text:
+        """Convert text to lottery purchase mode."""
+        # Korean text mappings
+        if "반자동" in text or "semi" in text.lower():
             return DhLotto645SelMode.SEMI_AUTO
-        if "" in text:
+        if "자동" in text or "auto" in text.lower():
             return DhLotto645SelMode.AUTO
-        if "" in text:
+        if "수동" in text or "manual" in text.lower():
             return DhLotto645SelMode.MANUAL
         raise ValueError(f"Invalid text: {text}")
 
     def __str__(self):
-        """ë¡œë˜ purchase ëª¨ë“œ ê°’ ì ¸ì˜µë‹ˆë‹¤."""
+        """Convert lottery purchase mode to Korean string."""
         if self == DhLotto645SelMode.AUTO:
-            return ""
+            return "자동"
         if self == DhLotto645SelMode.MANUAL:
-            return ""
+            return "수동"
         if self == DhLotto645SelMode.SEMI_AUTO:
-            return ""
+            return "반자동"
         raise ValueError(f"Invalid value: {self}")
 
 
 class DhLotto645:
-    """ë™í–‰ë³µê¶Œ ë¡œë˜ 6/45 purchaseí•˜ëŠ” í´ëž˜ìŠ¤ìž…ë‹ˆë‹¤."""
+    """DH Lottery Lotto 6/45 purchase class."""
 
     @dataclass
     class WinningData:
-        """ë¡œë˜ winning ì •ë³´ ë‚˜íƒ€ë‚´ëŠ” ë°í„° í´ëž˜ìŠ¤ìž…ë‹ˆë‹¤."""
+        """Lottery winning information data class."""
 
         round_no: int
         numbers: List[int]
@@ -79,14 +80,14 @@ class DhLotto645:
 
     @dataclass
     class Slot:
-        """ë¡œë˜ ìŠ¬ë¡¯ ì •ë³´ ë‚˜íƒ€ë‚´ëŠ” ë°í„° í´ëž˜ìŠ¤ìž…ë‹ˆë‹¤."""
+        """Lottery slot information data class."""
 
         mode: DhLotto645SelMode = DhLotto645SelMode.AUTO
         numbers: List[int] = field(default_factory=lambda: [])
 
     @dataclass(order=True)
     class Game:
-        """ë¡œë˜ ê²Œìž„ ì •ë³´ ë‚˜íƒ€ë‚´ëŠ” ë°í„° í´ëž˜ìŠ¤ìž…ë‹ˆë‹¤."""
+        """Lottery game information data class."""
 
         slot: str
         mode: DhLotto645SelMode = DhLotto645SelMode.AUTO
@@ -94,7 +95,7 @@ class DhLotto645:
 
     @dataclass
     class BuyData:
-        """ë¡œë˜ purchase ê²°ê³¼ ë‚˜íƒ€ë‚´ëŠ” ë°í„° í´ëž˜ìŠ¤ìž…ë‹ˆë‹¤."""
+        """Lottery purchase result data class."""
 
         round_no: int
         barcode: str
@@ -102,7 +103,7 @@ class DhLotto645:
         games: List["DhLotto645.Game"] = field(default_factory=lambda: [])
 
         def to_dict(self) -> Dict:
-            """ë°í„° ì‚¬ì „ í˜•ì‹ìœ¼ë¡œ ë³€í™˜í•©ë‹ˆë‹¤."""
+            """Convert data to dictionary format."""
             return {
                 "round_no": self.round_no,
                 "barcode": self.barcode,
@@ -112,7 +113,7 @@ class DhLotto645:
 
     @dataclass
     class BuyHistoryData:
-        """ë¡œë˜ purchase history ë‚˜íƒ€ë‚´ëŠ” ë°í„° í´ëž˜ìŠ¤ìž…ë‹ˆë‹¤."""
+        """Lottery purchase history data class."""
 
         round_no: int
         barcode: str
@@ -120,11 +121,11 @@ class DhLotto645:
         games: List["DhLotto645.Game"] = field(default_factory=lambda: [])
 
     def __init__(self, client: DhLotteryClient):
-        """DhLotto645 í´ëž˜ìŠ¤ ì´ˆê¸°í™”í•©ë‹ˆë‹¤."""
+        """Initialize DhLotto645 class."""
         self.client = client
 
     async def async_get_round_info(self, round_no: Optional[int] = None) -> WinningData:
-        """íŠ¹ì • round ë¡œë˜ round ì •ë³´ ì ¸ì˜µë‹ˆë‹¤."""
+        """Get specific round lottery information."""
         params = {
             "_": int(datetime.datetime.now().timestamp() * 1000),
         }
@@ -134,7 +135,7 @@ class DhLotto645:
         items = data.get('list', [])
 
         if not items or len(items) == 0:
-            raise DhLotto645Error(f"round  query failed. (round: {round_no})")
+            raise DhLotto645Error(f"Failed to query round information. (round: {round_no})")
         item = items[0]
 
         return DhLotto645.WinningData(
@@ -152,13 +153,13 @@ class DhLotto645:
         )
 
     async def async_get_latest_round_no(self) -> int:
-        """ìµœì‹  ë¡œë˜ round number ì ¸ì˜µë‹ˆë‹¤."""
+        """Get latest lottery round number."""
         latest_round = await self.async_get_round_info()
         return latest_round.round_no
 
     async def async_buy(self, items: List[Slot]) -> BuyData:
         """
-        ë¡œë˜ purchaseí•©ë‹ˆë‹¤.
+        Purchase lottery tickets.
         example: {"loginYn":"Y","result":{"oltInetUserId":"006094875","issueTime":"17:55:27","issueDay":"2024/05/28",
         "resultCode":"100","barCode4":"63917","barCode5":"56431","barCode6":"42167","barCode1":"59865","barCode2":"36399",
         "resultMsg":"SUCCESS","barCode3":"04155","buyRound":"1122","arrGameChoiceNum":["A|09|12|30|33|35|433"],
@@ -168,59 +169,59 @@ class DhLotto645:
         _LOGGER.debug(f"Buy Lotto, items: {items}")
 
         def deduplicate_numbers(_items: List["DhLotto645.Slot"]) -> None:
-            """purchase numberì„œ ì¤‘ë³µ ì œê±°í•©ë‹ˆë‹¤."""
+            """Remove duplicates from purchase numbers."""
             for _item in _items:
                 _item.numbers = list(set(_item.numbers))
 
         async def _verify_and_get_buy_count(_items: List["DhLotto645.Slot"]) -> int:
-            """purchase ëŠ¥í•œì§€ ê²€ì¦í•˜ê³ , purchase ëŠ¥í•œ ë¡œë˜ ê°œìˆ˜ ë°˜í™˜í•©ë‹ˆë‹¤."""
+            """Verify if purchase is possible and return purchasable count."""
 
             def _check_buy_time() -> None:
-                """purchase ëŠ¥í•œ ì‹œê°„ì¸ì§€ í™•ì¸í•©ë‹ˆë‹¤."""
+                """Check if purchase time is valid."""
                 _now = datetime.datetime.now()
                 if _now.hour < 6:
                     raise DhLotto645Error(
-                        "[ERROR] purchase   . ( 6 24 purchase )"
+                        "[ERROR] Purchase time not available. (Purchase available from 6:00 to 24:00)"
                     )
                 if _now.weekday() == 5 and _now.hour > 20:
                     raise DhLotto645Error(
-                        "[ERROR] purchase   . (  8 ()  6  )"
+                        "[ERROR] Purchase time not available. (Saturday purchase until 20:00, Sunday from 6:00)"
                     )
 
             def _check_item_count() -> None:
-                """purchase ì •ë³´ í•­ëª© ê°œìˆ˜ í™•ì¸í•©ë‹ˆë‹¤."""
+                """Check purchase information item count."""
                 if len(_items) == 0:
-                    raise DhLotto645Error("[ERROR] purchase  number  .")
+                    raise DhLotto645Error("[ERROR] No purchase numbers provided.")
                 if len(_items) > 5:
-                    raise DhLotto645Error("[ERROR] purchase  5 .")
+                    raise DhLotto645Error("[ERROR] Maximum 5 games can be purchased.")
                 for _idx, _item in enumerate(_items):
                     if (
                         _item.mode == DhLotto645SelMode.MANUAL
                         and len(_item.numbers) > 6
                     ):
                         raise DhLotto645Error(
-                            f"[ERROR] {_idx + 1}    number 6 ."
+                            f"[ERROR] Game {_idx + 1}: Maximum 6 numbers allowed."
                         )
 
             async def _async_check_weekly_limit() -> int:
-                """ì£¼ê°„ purchase ì œí•œ í™•ì¸í•©ë‹ˆë‹¤."""
+                """Check weekly purchase limit."""
                 _history_items = await self.client.async_get_buy_list('LO40')
                 __this_week_buy_count = sum(
                     [
                         _item.get("prchsQty", 0)
                         for _item in _history_items
-                        if _item.get("ltWnResult") == ""
+                        if _item.get("ltWnResult") == "미추첨"
                     ]
                 )
                 if __this_week_buy_count >= 5:
-                    raise DhLotto645Error("[ERROR] purchase   5 .")
+                    raise DhLotto645Error("[ERROR] Weekly purchase limit reached (5 games).")
                 return __this_week_buy_count
 
             async def _async_check_balance() -> None:
-                """Balance ì¶©ë¶„í•œì§€ í™•ì¸í•©ë‹ˆë‹¤."""
+                """Check if balance is sufficient."""
                 if _buy_count * 1000 > _balance.purchase_available:
                     raise DhLotto645Error(
-                        f"[ERROR] Balance . (Balance: {_balance.purchase_available})"
+                        f"[ERROR] Insufficient balance. (Balance: {_balance.purchase_available})"
                     )
                 _LOGGER.debug(
                     f"Buy count: {_buy_count}, deposit: {_buy_count * 1000}/{_balance.purchase_available}"
@@ -238,14 +239,14 @@ class DhLotto645:
             return _buy_count
 
         async def get_user_ready_socket() -> str:
-            """ìœ ì € ì¤€ë¹„ ì†Œì¼“ ì ¸ì˜µë‹ˆë‹¤."""
+            """Get user ready socket."""
             _resp = await self.client.session.post(
                 url="https://ol.dhlottery.co.kr/olotto/game/egovUserReadySocket.json"
             )
             return json.loads(await _resp.text())["ready_ip"]
 
         def make_param(tickets: List["DhLotto645.Slot"]) -> str:
-            """ë¡œë˜ purchase ì •ë³´ ìƒì„±í•©ë‹ˆë‹¤."""
+            """Create lottery purchase information."""
             return json.dumps(
                 [
                     {
@@ -262,7 +263,7 @@ class DhLotto645:
             )
 
         def parse_result(result: Dict) -> DhLotto645.BuyData:
-            """purchase ê²°ê³¼ íŒŒì‹±í•©ë‹ˆë‹¤.
+            """Parse purchase result.
             example: ["A|01|02|04|27|39|443", "B|11|23|25|27|28|452"]
             """
             return DhLotto645.BuyData(
@@ -306,23 +307,23 @@ class DhLotto645:
             response = await resp.json()
             if response["result"]["resultCode"] != "100":
                 raise DhLotto645Error(
-                    f"[ERROR] 6/45 purchase failed. (: {response['result']['resultMsg']})"
+                    f"[ERROR] 6/45 purchase failed. (Reason: {response['result']['resultMsg']})"
                 )
             return parse_result(response["result"])
         except DhLotteryError:
             raise
         except Exception as ex:
             raise DhLotto645Error(
-                f"[ERROR] 6/45 purchase failed. (: {str(ex)})"
+                f"[ERROR] 6/45 purchase failed. (Reason: {str(ex)})"
             ) from ex
 
     async def async_get_buy_history_this_week(self) -> list[BuyHistoryData]:
-        """recent 1ì£¼ì¼ê°„ purchase history queryí•©ë‹ˆë‹¤."""
+        """Query purchase history for the last week."""
 
         async def async_get_receipt(
             _order_no: str, _barcode: str
         ) -> List[DhLotto645.Game]:
-            """ì˜ìˆ˜ì¦ ê°€ì ¸ì˜µë‹ˆë‹¤."""
+            """Get receipt."""
             _resp = await self.client.async_get_with_login('mypage/lotto645TicketDetail.do',
                 params={"ntslOrdrNo": _order_no, "barcd": _barcode, "_": int(datetime.datetime.now().timestamp() * 1000)},
             )
@@ -358,5 +359,5 @@ class DhLotto645:
             return items
         except Exception as ex:
             raise DhLotteryError(
-                "[ERROR] recent 1 purchasehistory query failed."
+                "[ERROR] Failed to query recent purchase history."
             ) from ex
