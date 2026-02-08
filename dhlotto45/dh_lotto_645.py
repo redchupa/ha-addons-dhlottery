@@ -323,7 +323,7 @@ class DhLotto645:
         async def async_get_receipt(
             _order_no: str, _barcode: str
         ) -> List[DhLotto645.Game]:
-            """영수증 져옵니다."""
+            """영수증 가져옵니다."""
             _resp = await self.client.async_get_with_login('mypage/lotto645TicketDetail.do',
                 params={"ntslOrdrNo": _order_no, "barcd": _barcode, "_": int(datetime.datetime.now().timestamp() * 1000)},
             )
