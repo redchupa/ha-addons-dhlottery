@@ -830,7 +830,7 @@ async def update_sensors_for_account(account: AccountData):
                 hot_numbers_str = ", ".join(map(str, hot_cold_data.hot_numbers))
                 await publish_sensor_for_account(account, "lotto45_hot_numbers", hot_numbers_str, {
                     "numbers": hot_cold_data.hot_numbers,
-                    "friendly_name": "가장 많이 나온 번호 10개 (최근 20회)",
+                    "friendly_name": "통계: 가장 많이 나온 번호 10개 (최근 20회)",
                     "icon": "mdi:fire",
                 })
                 
@@ -838,7 +838,7 @@ async def update_sensors_for_account(account: AccountData):
                 cold_numbers_str = ", ".join(map(str, hot_cold_data.cold_numbers))
                 await publish_sensor_for_account(account, "lotto45_cold_numbers", cold_numbers_str, {
                     "numbers": hot_cold_data.cold_numbers,
-                    "friendly_name": "가장 적게 나온 번호 10개 (최근 20회)",
+                    "friendly_name": "통계: 가장 적게 나온 번호 10개 (최근 20회)",
                     "icon": "mdi:snowflake",
                 })
                 
@@ -847,7 +847,7 @@ async def update_sensors_for_account(account: AccountData):
                 await publish_sensor_for_account(account, "lotto45_most_frequent_numbers", top_freq_str, {
                     "top_5": [{"number": nf.number, "count": nf.count, "percentage": nf.percentage} 
                              for nf in hot_cold_data.most_frequent[:5]],
-                    "friendly_name": "가장 많이 나온 번호 5개 (최근 50회)",
+                    "friendly_name": "통계: 가장 많이 나온 번호 5개 (최근 50회)",
                     "icon": "mdi:chart-bar",
                 })
                 
