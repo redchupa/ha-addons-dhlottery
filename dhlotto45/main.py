@@ -373,13 +373,35 @@ async def init_clients():
         if mqtt_client.connect():
             logger.info("MQTT connected")
             
+            # Only register buttons for successfully logged in accounts
             for account in accounts.values():
-                if account.enabled and config["enable_lotto645"]:
+                if account.enabled and config["enable_lotto645"] and account.client and account.client.logged_in:
                     await register_buttons_for_account(account)
+                elif account.enabled and (not account.client or not account.client.logged_in):
+                    logger.warning(f"[BUTTON][{account.username}] Skipping button registration - not logged in")
             
+            # Subscribe to button commands for ALL logged-in accounts
             if accounts:
-                first_username = list(accounts.keys())[0]
-                mqtt_client.subscribe_to_commands(first_username, on_button_command)
+                # Set callback once
+                mqtt_client.client.on_message = on_button_command
+                
+                # Subscribe to each account's buttons
+                for account in accounts.values():
+                    if account.enabled and account.client and account.client.logged_in:
+                        button_ids = ["buy_auto_1", "buy_auto_5", "buy_manual"]
+                        
+                        # Subscribe to button commands
+                        for button_id in button_ids:
+                            command_topic = f"homeassistant/button/{mqtt_client.topic_prefix}_{account.username}_{button_id}/command"
+                            mqtt_client.client.subscribe(command_topic)
+                            logger.info(f"[MQTT] Subscribed: {command_topic}")
+                        
+                        # Subscribe to input_text
+                        input_command_topic = f"homeassistant/text/{mqtt_client.topic_prefix}_{account.username}_manual_numbers/set"
+                        mqtt_client.client.subscribe(input_command_topic)
+                        logger.info(f"[MQTT] Subscribed: {input_command_topic}")
+                
+                logger.info(f"[MQTT] Subscribed to {len([a for a in accounts.values() if a.enabled and a.client and a.client.logged_in])} account(s)")
         else:
             logger.warning("MQTT connection failed")
             mqtt_client = None
@@ -438,6 +460,13 @@ app = FastAPI(title="Lotto 45 Multi", version="2.0.0", lifespan=lifespan)
 
 async def background_tasks_for_account(account: AccountData):
     """Background tasks"""
+    username = account.username
+    
+    # Skip if not logged in
+    if not account.client or not account.client.logged_in:
+        logger.warning(f"[BG][{username}] Skipping background task - not logged in")
+        return
+    
     await asyncio.sleep(10)
     
     while True:
@@ -461,6 +490,14 @@ async def update_sensors_for_account(account: AccountData):
             await account.client.async_login()
         except Exception as e:
             logger.error(f"[SENSOR][{username}] Login failed: {e}")
+            # Publish error sensor and skip update
+            await publish_sensor_for_account(account, "lotto45_login_error", str(e)[:255], {
+                "error": str(e),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "friendly_name": "로그인 오류",
+                "icon": "mdi:account-alert",
+            })
+            logger.warning(f"[SENSOR][{username}] Skipping sensor update due to login failure")
             return
     
     try:
@@ -725,6 +762,18 @@ async def update_sensors_for_account(account: AccountData):
                     })
                     
                     logger.info(f"[SENSOR][{username}] Weekly: {weekly_purchase_count}/{weekly_limit}")
+                else:
+                    # No purchase history - inform user
+                    logger.info(f"[SENSOR][{username}] No purchase history in the last week")
+                    
+                    # Create placeholder weekly count sensor
+                    await publish_sensor_for_account(account, "lotto45_weekly_purchase_count", 0, {
+                        "weekly_limit": 5,
+                        "remaining": 5,
+                        "friendly_name": "주간 구매 횟수",
+                        "unit_of_measurement": "games",
+                        "icon": "mdi:ticket-confirmation",
+                    })
                     
             except Exception as e:
                 logger.warning(f"[SENSOR][{username}] Failed purchase history: {e}")
@@ -826,17 +875,26 @@ async def root():
 async def health():
     """Health"""
     accounts_status = {}
+    logged_in_count = 0
+    
     for username, account in accounts.items():
+        is_logged_in = account.client.logged_in if account.client else False
+        if is_logged_in:
+            logged_in_count += 1
+            
         accounts_status[username] = {
-            "logged_in": account.client.logged_in if account.client else False,
+            "logged_in": is_logged_in,
             "enabled": account.enabled,
+            "status": "✅ Active" if is_logged_in else "❌ Login Failed",
         }
     
     return {
-        "status": "ok",
+        "status": "ok" if logged_in_count > 0 else "degraded",
         "version": "2.0.0",
         "accounts": accounts_status,
         "total_accounts": len(accounts),
+        "logged_in_accounts": logged_in_count,
+        "failed_accounts": len(accounts) - logged_in_count,
     }
 
 
