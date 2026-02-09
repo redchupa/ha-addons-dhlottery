@@ -14,12 +14,12 @@ DH_LOTTERY_URL = "https://www.dhlottery.co.kr"
 
 @dataclass
 class DhLotteryBalanceData:
-    deposit: int = 0  # 총Balance
-    purchase_available: int = 0  # purchase능금액
-    reservation_purchase: int = 0  # 예약purchase금액
-    withdrawal_request: int = 0  # 출금신청중금액
-    purchase_impossible: int = 0  # purchase불능금액
-    this_month_accumulated_purchase: int = 0  # 번달누적purchase금액
+    deposit: int = 0  # 총 Balance
+    purchase_available: int = 0  # purchase 가능 금액
+    reservation_purchase: int = 0  # 예약 purchase 금액
+    withdrawal_request: int = 0  # 출금 신청중 금액
+    purchase_impossible: int = 0  # purchase 불능 금액
+    this_month_accumulated_purchase: int = 0  # 이번달 누적 purchase 금액
 
 
 class DhLotteryError(Exception):
