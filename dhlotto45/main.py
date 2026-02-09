@@ -334,7 +334,12 @@ async def execute_button_purchase(account: AccountData, button_id: str):
                 return
         else:
             if button_id == "buy_auto_5":
-                weekly_count = await account.lotto_645.async_get_weekly_purchase_count()
+                buy_list = await account.client.async_get_buy_list('LO40')
+                weekly_count = sum(
+                    item.get("prchsQty", 0)
+                    for item in buy_list
+                    if item.get("ltWnResult") == "미추첨"
+                )
                 if weekly_count >= 1:
                     await publish_purchase_error(
                         account,
