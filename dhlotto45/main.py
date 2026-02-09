@@ -333,10 +333,20 @@ async def execute_button_purchase(account: AccountData, button_id: str):
                 await publish_purchase_error(account, f"Error: {str(e)}")
                 return
         else:
-            count = 5 if button_id == "buy_auto_5" else 1
+            if button_id == "buy_auto_5":
+                weekly_count = await account.lotto_645.async_get_weekly_purchase_count()
+                if weekly_count >= 1:
+                    await publish_purchase_error(
+                        account,
+                        "5게임 자동 구매는 이번 주 미구매 시에만 가능합니다. (이미 구매: {}장)".format(weekly_count),
+                    )
+                    return
+                count = 5
+            else:
+                count = 1  # buy_auto_1
             slots = [DhLotto645.Slot(mode=DhLotto645SelMode.AUTO, numbers=[]) for _ in range(count)]
-        
-        max_games = 1 if button_id == "buy_manual" else None  # 수동 1게임은 정확히 1장만
+
+        max_games = 1 if button_id in ("buy_manual", "buy_auto_1") else None  # 1게임 구매는 정확히 1장만
         logger.info(f"[PURCHASE][{username}] Executing: {len(slots)} game(s)")
         result = await account.lotto_645.async_buy(slots, max_games=max_games)
         
