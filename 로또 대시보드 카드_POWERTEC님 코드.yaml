@@ -1,0 +1,334 @@
+type: grid
+cards:
+  - type: vertical-stack
+    cards:
+      - type: custom:button-card
+        entity: sensor.dhlotto_xxxxxxx_lotto645_winning_numbers
+        show_name: false
+        show_state: false
+        show_icon: false
+        styles:
+          card:
+            - background: rgba(255, 255, 255, 0.03)
+            - border: 1px solid rgba(255, 215, 0, 0.3)
+            - border-radius: 16px
+            - padding: 20px
+            - backdrop-filter: blur(10px)
+          grid:
+            - grid-template-areas: "\"content\""
+            - grid-template-columns: 1fr
+            - grid-template-rows: 1fr
+          custom_fields:
+            content:
+              - display: flex
+              - justify-content: center
+              - width: 100%
+        custom_fields:
+          content: |
+            [[[
+              const round =
+                states['sensor.dhlotto_xxxxxxx_lotto645_round']?.state || '';
+
+              const rawNums =
+                (entity.state.match(/\d+/g) || []).map(n => n.trim());
+
+              const filtered = rawNums.filter(n => n !== String(round));
+
+              if (filtered.length < 7) {
+                return `<div style="color:#888;text-align:center;">당첨번호 데이터 오류</div>`;
+              }
+
+              const winNums = filtered.slice(0, 6);
+              const bonus = filtered[6];
+
+              const drawDate =
+                states['sensor.dhlotto_xxxxxxx_lotto645_draw_date']?.state || '';
+
+              function color(n) {
+                n = parseInt(n);
+                if (n <= 9) return '#fbc400';
+                if (n <= 19) return '#69c8f2';
+                if (n <= 29) return '#ff7272';
+                if (n <= 39) return '#aaa';
+                return '#b0d840';
+              }
+
+              let out = `
+                <div style="width:100%;display:flex;flex-direction:column;align-items:center;">
+                  <div style="font-size:18px;font-weight:700;color:gold;margin-bottom:4px;">
+                    🎱 ${round}회 당첨번호
+                  </div>
+                  <div style="font-size:12px;opacity:0.65;margin-bottom:12px;">
+                    ${drawDate}
+                  </div>
+                  <div style="display:flex;gap:8px;align-items:center;">
+              `;
+
+              winNums.forEach(n => {
+                out += `
+                  <div style="
+                    width:33px;height:33px;border-radius:50%;
+                    background:${color(n)};
+                    display:flex;align-items:center;justify-content:center;
+                    font-weight:700;font-size:15px;color:#000;
+                    box-shadow:0 2px 6px rgba(0,0,0,0.3);
+                  ">${n}</div>
+                `;
+              });
+
+              out += `
+                <div style="font-size:20px;font-weight:700;opacity:0.6;">+</div>
+                <div style="
+                  width:33px;height:33px;border-radius:50%;
+                  background:${color(bonus)};
+                  display:flex;align-items:center;justify-content:center;
+                  font-weight:700;font-size:15px;color:#000;
+                  border:2px solid gold;
+                ">${bonus}</div>
+              </div></div>`;
+
+              return out;
+            ]]]
+      - type: custom:button-card
+        entity: sensor.dhlotto_xxxxxxx_lotto45_game_1
+        show_name: false
+        show_state: false
+        show_icon: false
+        styles:
+          card:
+            - background: rgba(255, 255, 255, 0.03)
+            - border: 1px solid rgba(255, 215, 0, 0.3)
+            - border-radius: 16px
+            - padding: 20px
+            - backdrop-filter: blur(10px)
+          grid:
+            - grid-template-areas: "\"content\""
+            - grid-template-columns: 1fr
+          custom_fields:
+            content:
+              - width: 100%
+              - align-self: middle
+              - justify-self: start
+        custom_fields:
+          content: |
+            [[[
+              const winEnt = states['sensor.dhlotto_xxxxxxx_lotto645_winning_numbers'];
+              const winNums =
+                winEnt && winEnt.state && !['unknown','unavailable','none',''].includes(winEnt.state)
+                  ? winEnt.state.split(/[, ]+/).map(n => n.trim())
+                  : [];
+
+              const histList = [
+                'sensor.dhlotto_xxxxxxx_lotto45_game_1',
+                'sensor.dhlotto_xxxxxxx_lotto45_game_2',
+                'sensor.dhlotto_xxxxxxx_lotto45_game_3',
+                'sensor.dhlotto_xxxxxxx_lotto45_game_4',
+                'sensor.dhlotto_xxxxxxx_lotto45_game_5'
+              ];
+
+              function histColor(num) {
+                const n = parseInt(num);
+                if (n <= 10) return '#fbc400';
+                if (n <= 20) return '#69c8f2';
+                if (n <= 30) return '#ff7272';
+                if (n <= 40) return '#aaa';
+                return '#b0d840';
+              }
+
+              function resultIcon(state) {
+                if (!state) return '<span style="opacity:.6;">⏳</span>';
+                const s = String(state).trim();
+                if (['미추첨','확인중','unknown','unavailable',''].includes(s))
+                  return '<span style="opacity:.6;">⏳</span>';
+                if (s === '낙첨') return '<span style="color:#f44;">❌</span>';
+                const match = s.match(/([1-5])등/);
+                if (match) {
+                  return `<span style="color:gold;font-weight:800;">🏆 ${match[1]}</span>`;
+                }
+                return '<span style="opacity:.6;">⏳</span>';
+              }
+
+              let items = '';
+
+              for (let i = 0; i < histList.length; i++) {
+                const ent = states[histList[i]];
+                if (!ent || ['unavailable','unknown','none',''].includes(ent.state)) continue;
+
+                const resultEnt = states[histList[i] + '_result'];
+                const resultValue = resultEnt?.state || '확인중';
+
+                const slot = ent.attributes['슬롯'] || String.fromCharCode(65 + i);
+                const mode = ent.attributes['선택'] || '자동';
+
+                const nums = ent.state.split(/[, ]+/).map(n => n.trim()).filter(Boolean);
+                if (nums.length < 6) continue;
+
+                // 중앙 정렬을 위해 balls 컨테이너의 justify-content: center 확인
+                let balls = `<div style="flex:1;display:flex;justify-content:center;gap:6px;">`;
+
+                for (const n of nums) {
+                  const isMatch = winNums.includes(String(n));
+                  balls += `
+                    <div style="
+                      width:28px;height:28px;border-radius:50%;
+                      background:${histColor(n)};
+                      display:flex;align-items:center;justify-content:center;
+                      font-weight:${isMatch ? 900 : 700};
+                      font-size:13px;color:#000;
+                      border:${isMatch ? '2px solid #fff' : 'none'};
+                    ">${n}</div>`;
+                }
+                balls += '</div>';
+
+                // 행 전체 컨테이너
+                items += `
+                  <div style="display:flex;align-items:center;margin-bottom:8px;width:100%;">
+                    <div style="width:60px;font-size:12px;color:rgba(255,255,255,.6);text-align:left;">
+                      ${slot}(${mode})
+                    </div>
+                    ${balls}
+                    <div style="width:60px;text-align:right;">
+                      ${resultIcon(resultValue)}
+                    </div>
+                  </div>`;
+              }
+
+              return items || '<div style="text-align:center;color:#888;">구매 내역 없음</div>';
+            ]]]
+      - type: custom:button-card
+        entity: sensor.dhlotto_xxxxxxx2_lotto45_game_1
+        show_name: false
+        show_state: false
+        show_icon: false
+        styles:
+          card:
+            - background: rgba(255, 255, 255, 0.03)
+            - border: 1px solid rgba(255, 215, 0, 0.3)
+            - border-radius: 16px
+            - padding: 20px
+            - backdrop-filter: blur(10px)
+          grid:
+            - grid-template-areas: "\"content\""
+            - grid-template-columns: 1fr
+          custom_fields:
+            content:
+              - width: 100%
+              - align-self: middle
+              - justify-self: start
+        custom_fields:
+          content: |
+            [[[
+              const winEnt = states['sensor.dhlotto_xxxxxxx2_lotto645_winning_numbers'];
+              const winNums =
+                winEnt && winEnt.state && !['unknown','unavailable','none',''].includes(winEnt.state)
+                  ? winEnt.state.split(/[, ]+/).map(n => n.trim())
+                  : [];
+
+              const histList = [
+                'sensor.dhlotto_xxxxxxx2_lotto45_game_1',
+                'sensor.dhlotto_xxxxxxx2_lotto45_game_2',
+                'sensor.dhlotto_xxxxxxx2_lotto45_game_3',
+                'sensor.dhlotto_xxxxxxx2_lotto45_game_4',
+                'sensor.dhlotto_xxxxxxx2_lotto45_game_5'
+              ];
+
+              function histColor(num) {
+                const n = parseInt(num);
+                if (n <= 10) return '#fbc400';
+                if (n <= 20) return '#69c8f2';
+                if (n <= 30) return '#ff7272';
+                if (n <= 40) return '#aaa';
+                return '#b0d840';
+              }
+
+              function resultIcon(state) {
+                if (!state) return '<span style="opacity:.6;">⏳</span>';
+                const s = String(state).trim();
+                if (['미추첨','확인중','unknown','unavailable',''].includes(s))
+                  return '<span style="opacity:.6;">⏳</span>';
+                if (s === '낙첨') return '<span style="color:#f44;">❌</span>';
+                const match = s.match(/([1-5])등/);
+                if (match) {
+                  return `<span style="color:gold;font-weight:800;">🏆 ${match[1]}</span>`;
+                }
+                return '<span style="opacity:.6;">⏳</span>';
+              }
+
+              let items = '';
+
+              for (let i = 0; i < histList.length; i++) {
+                const ent = states[histList[i]];
+                if (!ent || ['unavailable','unknown','none',''].includes(ent.state)) continue;
+
+                const resultEnt = states[histList[i] + '_result'];
+                const resultValue = resultEnt?.state || '확인중';
+
+                const slot = ent.attributes['슬롯'] || String.fromCharCode(65 + i);
+                const mode = ent.attributes['선택'] || '자동';
+
+                const nums = ent.state.split(/[, ]+/).map(n => n.trim()).filter(Boolean);
+                if (nums.length < 6) continue;
+
+                // 중앙 정렬을 위해 balls 컨테이너의 justify-content: center 확인
+                let balls = `<div style="flex:1;display:flex;justify-content:center;gap:6px;">`;
+
+                for (const n of nums) {
+                  const isMatch = winNums.includes(String(n));
+                  balls += `
+                    <div style="
+                      width:28px;height:28px;border-radius:50%;
+                      background:${histColor(n)};
+                      display:flex;align-items:center;justify-content:center;
+                      font-weight:${isMatch ? 900 : 700};
+                      font-size:13px;color:#000;
+                      border:${isMatch ? '2px solid #fff' : 'none'};
+                    ">${n}</div>`;
+                }
+                balls += '</div>';
+
+                // 행 전체 컨테이너
+                items += `
+                  <div style="display:flex;align-items:center;margin-bottom:8px;width:100%;">
+                    <div style="width:60px;font-size:12px;color:rgba(255,255,255,.6);text-align:left;">
+                      ${slot}(${mode})
+                    </div>
+                    ${balls}
+                    <div style="width:60px;text-align:right;">
+                      ${resultIcon(resultValue)}
+                    </div>
+                  </div>`;
+              }
+
+              return items || '<div style="text-align:center;color:#888;">구매 내역 없음</div>';
+            ]]]        
+      - type: entities
+        entities:
+          - entity: text.dhlotto_xxxxxxx_manual_numbers
+            name: 수동번호
+        card_mod:
+          style: |
+            ha-card {
+              height: 64px;
+              background: rgba(255, 255, 255, 0.05);
+              border: 1px solid rgba(255, 215, 0, 0.3);
+              border-radius: 12px;
+              padding: 0 8px;
+              display: flex;
+              align-items: center;
+              box-sizing: border-box;
+            }
+
+            .card-content {
+              padding: 0 !important;
+              width: 100%;
+            }
+
+            hui-input-text-entity-row {
+              width: 100%;
+            }
+
+            ha-textfield {
+              height: 40px;
+              --mdc-theme-primary: gold;
+              --mdc-text-field-fill-color: transparent;
+            }
