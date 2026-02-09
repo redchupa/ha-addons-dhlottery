@@ -934,6 +934,28 @@ async def update_sensors_for_account(account: AccountData):
             except Exception as e:
                 logger.warning(f"[SENSOR][{username}] Failed to update hot/cold numbers: {e}")
         
+        # Purchase Statistics (Total Winning)
+        if config["enable_lotto645"] and account.analyzer:
+            try:
+                stats = await account.analyzer.async_get_purchase_statistics(days=365)
+                
+                await publish_sensor_for_account(account, "lotto45_total_winning", stats.total_winning_amount, {
+                    "total_purchase": stats.total_purchase_amount,
+                    "total_purchase_count": stats.total_purchase_count,
+                    "total_winning_count": stats.total_winning_count,
+                    "win_rate": stats.win_rate,
+                    "roi": stats.roi,
+                    "rank_distribution": stats.rank_distribution,
+                    "unit_of_measurement": "KRW",
+                    "friendly_name": "총 당첨금 (최근 1년)",
+                    "icon": "mdi:trophy-variant",
+                })
+                
+                logger.info(f"[SENSOR][{username}] Purchase statistics updated (winning: {stats.total_winning_amount} KRW, ROI: {stats.roi}%)")
+                
+            except Exception as e:
+                logger.warning(f"[SENSOR][{username}] Failed to update purchase statistics: {e}")
+        
         # Winning Probability Sensors
         if config["enable_lotto645"]:
             try:

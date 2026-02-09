@@ -152,6 +152,15 @@ class DhLotto645:
             draw_date=item.get("ltRflYmd"),
         )
 
+    async def async_get_weekly_purchase_count(self) -> int:
+        """이번 주 미추첨 구매 수량 반환 (주간 한도 확인용)."""
+        _items = await self.client.async_get_buy_list('LO40')
+        return sum(
+            _item.get("prchsQty", 0)
+            for _item in _items
+            if _item.get("ltWnResult") == "미추첨"
+        )
+
     async def async_get_latest_round_no(self) -> int:
         """Get latest lottery round number."""
         latest_round = await self.async_get_round_info()
