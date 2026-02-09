@@ -194,8 +194,7 @@ class DhLotteryClient:
                 pass
             
             raise DhLotteryLoginError(
-                "Login failed.   number . "
-                "(5 failed  .   page number  )"
+                "Login failed. (Invalid response or too many attempts.)"
             )
             
         except DhLotteryError:
