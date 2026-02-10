@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.7.4] - 2026-02-10
+## [26-02-10] - 2026-02-10
 
 ### Fixed
 - **세션 관리 개선**: 구매 후 API 에러 발생 시 세션을 완전히 초기화하고 재로그인하도록 수정
