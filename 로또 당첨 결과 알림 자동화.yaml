@@ -2,7 +2,7 @@ alias: 로또 당첨 결과 알림 입니다
 description: ""
 triggers:
   - entity_id:
-      - sensor.dhlotto_ng410808_lotto45_latest_purchase
+      - sensor.dhlotto_xxxxxxxx_lotto45_latest_purchase
     trigger: state
     id: 최근 당첨번호가 변하면
     enabled: true
@@ -20,164 +20,10 @@ actions:
         data:
           message: >-
             레추 로또 당첨 결과는 {{
-            states('sensor.dhlotto_ng410808_lotto45_game_1_result') }}, {{
-            states('sensor.dhlotto_ng410808_lotto45_game_2_result') }}, {{
-            states('sensor.dhlotto_ng410808_lotto45_game_3_result') }}, {{
-            states('sensor.dhlotto_ng410808_lotto45_game_4_result') }}, {{
-            states('sensor.dhlotto_ng410808_lotto45_game_5_result') }}  입니다.
+            states('sensor.dhlotto_xxxxxxxx_lotto45_game_1_result') }}, {{
+            states('sensor.dhlotto_xxxxxxxx_lotto45_game_2_result') }}, {{
+            states('sensor.dhlotto_xxxxxxxx_lotto45_game_3_result') }}, {{
+            states('sensor.dhlotto_xxxxxxxx_lotto45_game_4_result') }}, {{
+            states('sensor.dhlotto_xxxxxxxx_lotto45_game_5_result') }}  입니다.
     enabled: true
 mode: single
-  - if:
-      - condition: trigger
-        id:
-          - 최근 게임2의 바코드 속성이 변하면
-    then:
-      - action: telegram_bot.send_message
-        metadata: {}
-        data:
-          config_entry_id: 01JZD3MS43VPSZTEQ3RP96PQJT
-          target:
-            - "-4195623389"
-          message: >-
-            로또 1장을 구매하였습니다.
-
-            추첨 회차 {{ states('sensor.dhlotto_xxxxxx_lotto45_latest_purchase')
-            }}회
-
-            자동 구매 번호 {{ states('sensor.dhlotto_xxxxxx_lotto45_game_2') }}
-      - action: notify.mobile_app_gimjihyeonyi_iphone17
-        data:
-          message: >-
-            로또 1장을 구매하였습니다.
-
-            추첨 회차 {{ states('sensor.dhlotto_xxxxxx_lotto45_latest_purchase')
-            }}회
-
-            자동 구매 번호 {{ states('sensor.dhlotto_xxxxxx_lotto45_game_2') }}
-      - action: notify.mobile_app_sm_f966n
-        metadata: {}
-        data:
-          message: >-
-            로또 1장을 구매하였습니다.
-
-            추첨 회차 {{ states('sensor.dhlotto_xxxxxx_lotto45_latest_purchase')
-            }}회
-
-            자동 구매 번호 {{ states('sensor.dhlotto_xxxxxx_lotto45_game_2') }}
-    enabled: true
-  - if:
-      - condition: trigger
-        id:
-          - 최근 게임3의 바코드 속성이 변하면
-    then:
-      - action: telegram_bot.send_message
-        metadata: {}
-        data:
-          config_entry_id: 01JZD3MS43VPSZTEQ3RP96PQJT
-          target:
-            - "-4195623389"
-          message: >-
-            로또 1장을 구매하였습니다.
-
-            추첨 회차 {{ states('sensor.dhlotto_xxxxxx_lotto45_latest_purchase')
-            }}회
-
-            자동 구매 번호 {{ states('sensor.dhlotto_xxxxxx_lotto45_game_3') }}
-      - action: notify.mobile_app_gimjihyeonyi_iphone17
-        data:
-          message: >-
-            로또 1장을 구매하였습니다.
-
-            추첨 회차 {{ states('sensor.dhlotto_xxxxxx_lotto45_latest_purchase')
-            }}회
-
-            자동 구매 번호 {{ states('sensor.dhlotto_xxxxxx_lotto45_game_3') }}
-      - action: notify.mobile_app_sm_f966n
-        metadata: {}
-        data:
-          message: >-
-            로또 1장을 구매하였습니다.
-
-            추첨 회차 {{ states('sensor.dhlotto_xxxxxx_lotto45_latest_purchase')
-            }}회
-
-            자동 구매 번호 {{ states('sensor.dhlotto_xxxxxx_lotto45_game_3') }}
-    enabled: true
-  - if:
-      - condition: trigger
-        id:
-          - 최근 게임4의 바코드 속성이 변하면
-    then:
-      - action: telegram_bot.send_message
-        metadata: {}
-        data:
-          config_entry_id: 01JZD3MS43VPSZTEQ3RP96PQJT
-          target:
-            - "-4195623389"
-          message: >-
-            로또 1장을 구매하였습니다.
-
-            추첨 회차 {{ states('sensor.dhlotto_xxxxxx_lotto45_latest_purchase')
-            }}회
-
-            자동 구매 번호 {{ states('sensor.dhlotto_xxxxxx_lotto45_game_4') }}
-      - action: notify.mobile_app_gimjihyeonyi_iphone17
-        data:
-          message: >-
-            로또 1장을 구매하였습니다.
-
-            추첨 회차 {{ states('sensor.dhlotto_xxxxxx_lotto45_latest_purchase')
-            }}회
-
-            자동 구매 번호 {{ states('sensor.dhlotto_xxxxxx_lotto45_game_4') }}
-      - action: notify.mobile_app_sm_f966n
-        metadata: {}
-        data:
-          message: >-
-            로또 1장을 구매하였습니다.
-
-            추첨 회차 {{ states('sensor.dhlotto_xxxxxx_lotto45_latest_purchase')
-            }}회
-
-            자동 구매 번호 {{ states('sensor.dhlotto_xxxxxx_lotto45_game_4') }}
-    enabled: true
-  - if:
-      - condition: trigger
-        id:
-          - 최근 게임5의 바코드 속성이 변하면
-    then:
-      - action: telegram_bot.send_message
-        metadata: {}
-        data:
-          config_entry_id: 01JZD3MS43VPSZTEQ3RP96PQJT
-          target:
-            - "-4195623389"
-          message: >-
-            로또 1장을 구매하였습니다.
-
-            추첨 회차 {{ states('sensor.dhlotto_xxxxxx_lotto45_latest_purchase')
-            }}회
-
-            자동 구매 번호 {{ states('sensor.dhlotto_xxxxxx_lotto45_game_5') }}
-      - action: notify.mobile_app_gimjihyeonyi_iphone17
-        data:
-          message: >-
-            로또 1장을 구매하였습니다.
-
-            추첨 회차 {{ states('sensor.dhlotto_xxxxxx_lotto45_latest_purchase')
-            }}회
-
-            자동 구매 번호 {{ states('sensor.dhlotto_xxxxxx_lotto45_game_5') }}
-      - action: notify.mobile_app_sm_f966n
-        metadata: {}
-        data:
-          message: >-
-            로또 1장을 구매하였습니다.
-
-            추첨 회차 {{ states('sensor.dhlotto_xxxxxx_lotto45_latest_purchase')
-            }}회
-
-            자동 구매 번호 {{ states('sensor.dhlotto_xxxxxx_lotto45_game_5') }}
-    enabled: true
-mode: single
-
