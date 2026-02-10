@@ -146,6 +146,30 @@ def is_purchase_available_now() -> bool:
     return True
 
 
+def get_next_available_time() -> datetime:
+    """
+    다음 구매 가능 시간을 계산합니다.
+    Returns: 다음 구매 가능 시간 (KST)
+    """
+    now = datetime.now(_TZ_KST)
+    wd = now.weekday()  # 0=Mon .. 6=Sun
+    minutes = now.hour * 60 + now.minute
+    
+    # 00:00~05:59 (모든 요일): 오늘 06:00
+    if minutes < 360:
+        next_time = now.replace(hour=6, minute=0, second=0, microsecond=0)
+        return next_time
+    
+    # 토요일 20:00~23:59: 내일(일요일) 06:00
+    if wd == 5 and minutes >= 1200:
+        next_day = now + timedelta(days=1)
+        next_time = next_day.replace(hour=6, minute=0, second=0, microsecond=0)
+        return next_time
+    
+    # 현재 구매 가능한 경우 (이 함수가 호출되면 안 되지만 안전장치)
+    return now
+
+
 async def register_buttons_for_account(account: AccountData):
     """Register button entities for a specific account"""
     if not mqtt_client or not mqtt_client.connected:
@@ -577,22 +601,63 @@ async def update_sensors_for_account(account: AccountData):
     """Update all sensors for account. 구매 불가 시간대에는 로그인/API 호출 없이 스킵."""
     username = account.username
 
+    # 구매 불가 시간대 체크 (최우선)
     if not is_purchase_available_now():
-        logger.info(f"[SENSOR][{username}] Skipping update (purchase unavailable time, KST)")
+        now_kst = datetime.now(_TZ_KST)
+        next_available = get_next_available_time()
+        time_until_available = next_available - now_kst
+        hours = int(time_until_available.total_seconds() // 3600)
+        minutes = int((time_until_available.total_seconds() % 3600) // 60)
+        
+        logger.info(f"[SENSOR][{username}] Purchase unavailable time (KST). Next sync at {next_available.strftime('%H:%M')}")
+        
+        # 사용자에게 상태 알림 센서 발행
+        await publish_sensor_for_account(account, "lotto45_sync_status", "구매 불가 시간 (동기화 대기 중)", {
+            "status": "waiting",
+            "reason": "구매 불가능 시간대",
+            "current_time_kst": now_kst.strftime("%Y-%m-%d %H:%M:%S"),
+            "next_available_time": next_available.strftime("%Y-%m-%d %H:%M:%S"),
+            "time_until_available": f"{hours}시간 {minutes}분 후",
+            "available_hours": {
+                "평일/일요일": "06:00-24:00",
+                "토요일": "06:00-20:00"
+            },
+            "friendly_name": "동기화 상태",
+            "icon": "mdi:sleep",
+        })
+        
         return
 
+    # 로그인 확인 및 재로그인 시도
     if not account.client or not account.client.logged_in:
         logger.warning(f"[SENSOR][{username}] Not logged in, attempting login...")
         try:
             await account.client.async_login()
+            logger.info(f"[SENSOR][{username}] Re-login successful")
         except Exception as e:
+            now_kst = datetime.now(_TZ_KST)
+            msg = str(e)[:255]
             logger.error(f"[SENSOR][{username}] Login failed: {e}")
-            await publish_sensor_for_account(account, "lotto45_login_error", str(e)[:255], {
+            
+            # 로그인 오류 센서
+            await publish_sensor_for_account(account, "lotto45_login_error", msg, {
                 "error": str(e),
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "friendly_name": "로그인 오류",
                 "icon": "mdi:account-alert",
             })
+            
+            # 동기화 상태 센서 (재로그인 실패)
+            await publish_sensor_for_account(account, "lotto45_sync_status", "동기화 실패 (재로그인 필요)", {
+                "status": "relogin_failed",
+                "error": msg,
+                "error_time": now_kst.strftime("%Y-%m-%d %H:%M:%S"),
+                "retry_in": f"{config['update_interval'] // 60}분 후",
+                "action_required": "애드온 재시작 또는 계정 정보 확인 필요",
+                "friendly_name": "동기화 상태",
+                "icon": "mdi:login-variant",
+            })
+            
             logger.warning(f"[SENSOR][{username}] Skipping sensor update due to login failure")
             return
     
@@ -1020,9 +1085,19 @@ async def update_sensors_for_account(account: AccountData):
         
         # Update time
         now = datetime.now(timezone.utc).isoformat()
+        now_kst = datetime.now(_TZ_KST)
         await publish_sensor_for_account(account, "lotto45_last_update", now, {
             "friendly_name": "마지막 업데이트",
             "icon": "mdi:clock-check-outline",
+        })
+        
+        # 동기화 상태 센서 (정상)
+        await publish_sensor_for_account(account, "lotto45_sync_status", "정상 동기화 완료", {
+            "status": "success",
+            "last_sync_time": now_kst.strftime("%Y-%m-%d %H:%M:%S"),
+            "next_sync_in": f"{config['update_interval'] // 60}분 후",
+            "friendly_name": "동기화 상태",
+            "icon": "mdi:check-circle",
         })
         
         logger.info(f"[SENSOR][{username}] Updated successfully")
@@ -1031,25 +1106,68 @@ async def update_sensors_for_account(account: AccountData):
         if account.client:
             account.client.logged_in = False
         msg = str(e)[:255]
+        now_kst = datetime.now(_TZ_KST)
+        
+        # 로그인 오류 센서
         await publish_sensor_for_account(account, "lotto45_login_error", msg, {
             "error": str(e),
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "friendly_name": "로그인 오류",
             "icon": "mdi:account-alert",
         })
+        
+        # 동기화 상태 센서 (로그인 실패)
+        await publish_sensor_for_account(account, "lotto45_sync_status", "동기화 실패 (로그인 오류)", {
+            "status": "login_error",
+            "error": msg,
+            "error_time": now_kst.strftime("%Y-%m-%d %H:%M:%S"),
+            "retry_in": f"{config['update_interval'] // 60}분 후",
+            "friendly_name": "동기화 상태",
+            "icon": "mdi:alert-circle",
+        })
+        
         logger.warning(f"[SENSOR][{username}] Login/API failed: {e}")
+        
     except DhLotteryError as e:
         if account.client:
             account.client.logged_in = False
         msg = str(e)[:255]
+        now_kst = datetime.now(_TZ_KST)
+        
+        # API 오류 센서
         await publish_sensor_for_account(account, "lotto45_login_error", msg, {
             "error": str(e),
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "friendly_name": "로그인/API 오류",
             "icon": "mdi:account-alert",
         })
+        
+        # 동기화 상태 센서 (API 실패)
+        await publish_sensor_for_account(account, "lotto45_sync_status", "동기화 실패 (API 오류)", {
+            "status": "api_error",
+            "error": msg,
+            "error_time": now_kst.strftime("%Y-%m-%d %H:%M:%S"),
+            "retry_in": f"{config['update_interval'] // 60}분 후",
+            "friendly_name": "동기화 상태",
+            "icon": "mdi:alert-circle",
+        })
+        
         logger.warning(f"[SENSOR][{username}] Update failed (API): {e}")
+        
     except Exception as e:
+        msg = str(e)[:255]
+        now_kst = datetime.now(_TZ_KST)
+        
+        # 동기화 상태 센서 (알 수 없는 오류)
+        await publish_sensor_for_account(account, "lotto45_sync_status", "동기화 실패 (알 수 없는 오류)", {
+            "status": "unknown_error",
+            "error": msg,
+            "error_time": now_kst.strftime("%Y-%m-%d %H:%M:%S"),
+            "retry_in": f"{config['update_interval'] // 60}분 후",
+            "friendly_name": "동기화 상태",
+            "icon": "mdi:alert-circle",
+        })
+        
         logger.error(f"[SENSOR][{username}] Update failed: {e}", exc_info=True)
 
 
