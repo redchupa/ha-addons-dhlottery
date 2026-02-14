@@ -296,31 +296,46 @@ class DhLotto645:
             _LOGGER.info(f"[PURCHASE] Before deduplicate - items: {[(item.mode, item.numbers) for item in items]}")
             deduplicate_numbers(items)
             _LOGGER.info(f"[PURCHASE] After deduplicate - items: {[(item.mode, item.numbers) for item in items]}")
+            # 간소화 페이지(mainMode=Y) 대비: 구매 전 정상 페이지 세션 확보
+            await self.client._async_ensure_main_mode_normal()
             buy_count = await _verify_and_get_buy_count(items)
             buy_items = items[:buy_count]
             live_round = str(await self.async_get_latest_round_no() + 1)
-            direct = (await get_user_ready_socket())
-            param = make_param(buy_items)
-            _LOGGER.info(f"[PURCHASE] Sending to server - param: {param}")
-            _LOGGER.info(f"[PURCHASE] buy_items before param: {[(item.mode, item.numbers) for item in buy_items]}")
-            resp = await self.client.session.post(
-                url="https://ol.dhlottery.co.kr/olotto/game/execBuy.do",
-                data={
-                    "round": live_round,
-                    "direct": direct,
-                    "nBuyAmount": str(1000 * len(buy_items)),
-                    "param": param,
-                    "gameCnt": len(buy_items),
-                    "saleMdaDcd": "10",
-                },
-                timeout=10,
-            )
-            response = await resp.json()
-            if response["result"]["resultCode"] != "100":
-                raise DhLotto645Error(
-                    f"[ERROR] 6/45 purchase failed. (Reason: {response['result']['resultMsg']})"
-                )
-            return parse_result(response["result"])
+
+            for attempt in range(2):
+                try:
+                    direct = (await get_user_ready_socket())
+                    param = make_param(buy_items)
+                    _LOGGER.info(f"[PURCHASE] Sending to server - param: {param}")
+                    _LOGGER.info(f"[PURCHASE] buy_items before param: {[(item.mode, item.numbers) for item in buy_items]}")
+                    resp = await self.client.session.post(
+                        url="https://ol.dhlottery.co.kr/olotto/game/execBuy.do",
+                        data={
+                            "round": live_round,
+                            "direct": direct,
+                            "nBuyAmount": str(1000 * len(buy_items)),
+                            "param": param,
+                            "gameCnt": len(buy_items),
+                            "saleMdaDcd": "10",
+                        },
+                        timeout=10,
+                    )
+                    response = await resp.json()
+                    if response.get("result", {}).get("resultCode") != "100":
+                        raise DhLotto645Error(
+                            f"[ERROR] 6/45 purchase failed. (Reason: {response.get('result', {}).get('resultMsg', 'Unknown')})"
+                        )
+                    return parse_result(response["result"])
+                except (DhLotto645Error, DhLotteryError):
+                    raise
+                except Exception as ex:
+                    if attempt == 0:
+                        _LOGGER.warning(f"[PURCHASE] Attempt 1 failed: {ex}. Retrying with mainMode=N ensure...")
+                        await self.client._async_ensure_main_mode_normal()
+                    else:
+                        raise DhLotto645Error(
+                            f"[ERROR] 6/45 purchase failed. (Reason: {str(ex)})"
+                        ) from ex
         except DhLotteryError:
             raise
         except Exception as ex:

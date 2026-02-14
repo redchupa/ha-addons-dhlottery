@@ -11,6 +11,9 @@ from dh_rsa import RSAKey
 _LOGGER = logging.getLogger(__name__)
 
 DH_LOTTERY_URL = "https://www.dhlottery.co.kr"
+# mainMode=N: 정상 페이지 (API/구매 정상 동작), mainMode=Y: 간소화 페이지 (임시 운영, API 호환성 이슈)
+DH_MAIN_PAGE_NORMAL = f"{DH_LOTTERY_URL}/main"
+DH_MAIN_PARAMS_NORMAL = {"mainMode": "N"}
 
 @dataclass
 class DhLotteryBalanceData:
@@ -123,20 +126,23 @@ class DhLotteryClient:
         self,
         path: str,
         params: dict,
-        retry: int = 1,
+        retry: int = 2,
     ) -> dict[str, Any]:
-        """Login 필요한 page 져옵니다."""
+        """Login 필요한 page 져옵니다. retry 시 mainMode=N 확보 후 재시도."""
         async with self._lock:
             try:
                 return await self.async_get(path, params)
             except DhAPIError:
                 if retry > 0:
-                    _LOGGER.info("API error, retrying with login...")
-                    # 세션을 완전히 초기화하고 재로그인
-                    _LOGGER.info("Closing existing session and creating new one...")
-                    await self.close()
-                    self._create_session()
-                    await self.async_login()
+                    _LOGGER.info("API error, retrying with mainMode=N ensure and login...")
+                    # 1) 먼저 mainMode=N 정상 페이지 세션 확보 시도
+                    await self._async_ensure_main_mode_normal()
+                    # 2) 그래도 실패 시 세션 초기화 후 재로그인
+                    if retry == 1:
+                        _LOGGER.info("Closing existing session and creating new one...")
+                        await self.close()
+                        self._create_session()
+                        await self.async_login()
                     return await self.async_get_with_login(path, params, retry - 1)
                 raise DhLotteryLoginError("[ERROR] Login  API  failed.")
             except DhLotteryError:
@@ -184,6 +190,8 @@ class DhLotteryClient:
                 if 'loginSuccess.do' in final_url or '/mypage/' in final_url:
                     self.logged_in = True
                     _LOGGER.info("Login successful!")
+                    # 간소화 페이지(mainMode=Y) 대비: 정상 페이지(mainMode=N) 세션 확보
+                    await self._async_ensure_main_mode_normal()
                     return
             
             # failed 처리
@@ -208,6 +216,49 @@ class DhLotteryClient:
             self.logged_in = False
             _LOGGER.exception("Login exception occurred")
             raise DhLotteryError(f"[ERROR] Login execute failed: {ex}") from ex
+
+    async def _async_ensure_main_mode_normal(self) -> bool:
+        """
+        정상 페이지(mainMode=N) 세션 확보. 간소화 페이지(mainMode=Y)일 경우 정상 페이지로 전환.
+        Returns: True if successful
+        """
+        if not self.session or self.session.closed:
+            self._create_session()
+        try:
+            resp = await self.session.get(
+                DH_MAIN_PAGE_NORMAL,
+                params=DH_MAIN_PARAMS_NORMAL,
+                allow_redirects=True,
+            )
+            final_url = str(resp.url)
+            # 리다이렉트 후 mainMode=Y로 바뀌었으면 간소화 페이지로 간 것
+            if "mainMode=Y" in final_url or "mainMode=y" in final_url.lower():
+                _LOGGER.warning("Site redirected to simplified page (mainMode=Y). Retrying with explicit mainMode=N.")
+                # 쿠키 유지한 채로 mainMode=N 명시적 재요청
+                resp = await self.session.get(
+                    DH_MAIN_PAGE_NORMAL,
+                    params=DH_MAIN_PARAMS_NORMAL,
+                    allow_redirects=False,
+                )
+            _LOGGER.debug(f"Main page mode ensured: {resp.status}")
+            return resp.status in (200, 302)
+        except Exception as ex:
+            _LOGGER.warning(f"Failed to ensure main mode normal: {ex}")
+            return False
+
+    def _is_simplified_page_response(self, text: str, url: str = "") -> bool:
+        """응답/URL로 간소화 페이지 여부 추정 (임시 운영 페이지 감지)."""
+        if not text and not url:
+            return False
+        url_lower = (url or "").lower()
+        # mainMode=Y 리다이렉션 시 간소화 페이지
+        if "mainmode=y" in url_lower:
+            return True
+        if not text:
+            return False
+        text_lower = text.lower()
+        simplified_keywords = ["간소화", "임시", "simplified", "maintenance"]
+        return any(kw in text or kw in text_lower for kw in simplified_keywords)
 
     async def _async_set_select_rsa_module(self) -> None:
         """RSA 모듈 설정합니다. API 우선, failed 시 Login page서 파싱"""
