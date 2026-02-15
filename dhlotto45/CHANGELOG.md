@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [redchupa-2-0-3] - 2026-02-18
+
+### Changed
+- **prev 센서 데이터 소스 변경**: selectMyLotteryledger.do API의 ltWnResult(당첨결과) 직접 사용
+  - 기존: 현재 구매 all_games에서 회차 필터 후 async_check_winning으로 재계산
+  - 변경: API 응답의 ltWnResult 그대로 사용 (낙첨, 1등 당첨 등)
+- **이전 회차 판단**: ltWnResult != "미추첨"인 건 중 가장 최근 회차를 이전 회차로 사용
+
+---
+
 ## [redchupa-2-0-2] - 2026-02-18
 
 ### Fixed
