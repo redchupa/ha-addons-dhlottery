@@ -20,10 +20,11 @@ actions:
         data:
           message: >-
             레추 로또 당첨 결과는 {{
-            states('sensor.dhlotto_xxxxxxxx_lotto45_game_1_result') }}, {{
-            states('sensor.dhlotto_xxxxxxxx_lotto45_game_2_result') }}, {{
-            states('sensor.dhlotto_xxxxxxxx_lotto45_game_3_result') }}, {{
-            states('sensor.dhlotto_xxxxxxxx_lotto45_game_4_result') }}, {{
-            states('sensor.dhlotto_xxxxxxxx_lotto45_game_5_result') }}  입니다.
+            states('sensor.dhlotto_xxxxxxxx_lotto45_prev_game_1_result') }}, {{
+            states('sensor.dhlotto_xxxxxxxx_lotto45_prev_game_2_result') }}, {{
+            states('sensor.dhlotto_xxxxxxxx_lotto45_prev_game_3_result') }}, {{
+            states('sensor.dhlotto_xxxxxxxx_lotto45_prev_game_4_result') }}, {{
+            states('sensor.dhlotto_xxxxxxxx_lotto45_prev_game_5_result') }}  입니다.
     enabled: true
 mode: single
+
