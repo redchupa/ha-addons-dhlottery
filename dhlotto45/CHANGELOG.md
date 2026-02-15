@@ -7,12 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [redchupa-2-0-6] - 2026-02-18
+
+### Changed
+- (버전 업데이트)
+
+---
+
 ## [redchupa-2-0-5] - 2026-02-18
 
 ### Changed
 - **게임별 당첨 결과**: lotto645TicketDetail.do의 game_dtl[].rank + drawed 기반으로 표시 (현재/이전 공통)
   - selectMyLotteryledger의 ntslOrdrNo, gmInfo로 각 건별 상세 조회
 - **구매 게임 (현재) 순서**: 최신 구매가 1번 슬롯에 표시되도록 수정 (기존 reversed 제거)
+- **구매 게임 (현재) 필터**: 현재 회차(latest_round_no + 1) 구매만 표시
+  - 이전 회차 구매는 prev_game_1~5에만 표시되도록 분리
 
 ---
 

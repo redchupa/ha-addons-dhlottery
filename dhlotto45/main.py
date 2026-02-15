@@ -927,8 +927,10 @@ async def update_sensors_for_account(account: AccountData):
             # Purchase history - GAME SENSORS HERE!
             try:
                 history = await account.lotto_645.async_get_buy_history_this_week()
+                latest_round_no = await account.lotto_645.async_get_latest_round_no()
+                current_round = latest_round_no + 1  # 아직 추첨 안 된 회차 = 현재 판매 중
                 
-                # Collect games (max 5)
+                # Collect games (max 5) - 현재 회차(current_round) 구매만 표시
                 all_games = []
                 if history:
                     latest_purchase = history[0]
@@ -949,9 +951,10 @@ async def update_sensors_for_account(account: AccountData):
                         "icon": "mdi:receipt-text",
                     })
                     
-                    # Collect all games (max 5) - lotto645TicketDetail game_dtl[].rank 사용
-                    # selectMyLotteryledger는 최신순 반환 → 그대로 사용 (1번=최신, 5번=가장 오래됨)
+                    # 현재 회차 구매만 필터: round_no == current_round (이전 회차는 prev_game에 표시)
                     for purchase in history:
+                        if purchase.round_no != current_round:
+                            continue
                         for gd in purchase.game_details:
                             all_games.append({
                                 'game': gd['game'],
@@ -966,9 +969,7 @@ async def update_sensors_for_account(account: AccountData):
                     # No purchase history
                     logger.info(f"[SENSOR][{username}] No purchase history in the last week")
                 
-                logger.info(f"[SENSOR][{username}] Publishing 5 game sensors (filled: {len(all_games)})")
-                
-                latest_round_no = await account.lotto_645.async_get_latest_round_no()
+                logger.info(f"[SENSOR][{username}] Publishing 5 game sensors (current_round={current_round}, filled: {len(all_games)})")
                 weekly_purchase_count = 0
                 
                 # 구매 게임 (현재): 최근 5게임 구매내역 및 결과 표시
