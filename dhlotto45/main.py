@@ -950,7 +950,8 @@ async def update_sensors_for_account(account: AccountData):
                     })
                     
                     # Collect all games (max 5) - lotto645TicketDetail game_dtl[].rank 사용
-                    for purchase in reversed(history):
+                    # selectMyLotteryledger는 최신순 반환 → 그대로 사용 (1번=최신, 5번=가장 오래됨)
+                    for purchase in history:
                         for gd in purchase.game_details:
                             all_games.append({
                                 'game': gd['game'],
