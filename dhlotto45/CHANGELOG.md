@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [26-02-15] - 2026-02-15
+
+### Changed
+- **빈 슬롯 표시 개선**: 구매 내역이 없을 때 "Empty" → "구매 내역 없음"으로 변경 (한국어 사용성 개선)
+- **센서 네이밍 구분**: 이전 구매 / 현재 구매로 명확히 구분
+  - `lotto45_game_{i}` → `lotto45_current_game_{i}` (현재 구매 게임 1~5)
+  - `lotto45_prev_game_{i}` (이전 구매 게임 1~5) - friendly_name 통일
+  - `lotto45_prev_round` → "이전 구매 회차"
+  
+---
+
 ## [26-02-14] - 2026-02-14
 
 ### Added
