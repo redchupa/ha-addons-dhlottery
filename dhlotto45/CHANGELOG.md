@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [26-02-14] - 2026-02-14
+
+### Added
+- **이전 회차 당첨 결과 센서**: 추첨 직후 당첨 결과를 바로 확인할 수 있는 센서 11개 추가
+  - `lotto45_prev_round`: 이전 회차(최근 추첨) 번호
+  - `lotto45_prev_game_1` ~ `lotto45_prev_game_5`: 이전 회차 구매 번호
+  - `lotto45_prev_game_1_result` ~ `lotto45_prev_game_5_result`: 이전 회차 당첨 결과
+- **구매 불가 시간대 1회 동기화**: 토요일 20:00~일요일 06:00 구간에서 이전 회차 결과만 1회 API 호출
+  - 추첨 후 바로 당첨 확인 가능
+  - 1회 호출 후 추가 호출 없음 (안정성)
+
+### Fixed
+- **간소화 페이지(mainMode=Y) 대응**: 동행복권 임시 간소화 페이지 운영 시 정상 동작
+  - 로그인 후 `main?mainMode=N` 방문으로 정상 페이지 세션 확보
+  - 구매 전 mainMode=N 확보, API 오류 시 재시도 로직 추가
+  - 구매 API 실패 시 mainMode=N 확보 후 1회 재시도
+
+### Improved
+- **구매내역 API 분리**: 구매 불가 시간대에도 구매내역 API만 별도 호출 가능
+- **당첨 결과 즉시 확인**: 토요일 추첨(20:45) 후 구매 불가 시간대에 1회 동기화로 결과 확인
+
+---
+
 ## [26-02-10] - 2026-02-10
 
 ### Fixed

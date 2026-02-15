@@ -387,3 +387,47 @@ class DhLotto645:
             raise DhLotteryError(
                 "[ERROR] Failed to query recent purchase history."
             ) from ex
+
+    async def async_get_buy_history_for_round(self, round_no: int) -> list[BuyHistoryData]:
+        """특정 회차 구매 내역 조회 (이전 회차 당첨 결과용)."""
+
+        async def async_get_receipt(
+            _order_no: str, _barcode: str
+        ) -> List[DhLotto645.Game]:
+            _resp = await self.client.async_get_with_login('mypage/lotto645TicketDetail.do',
+                params={"ntslOrdrNo": _order_no, "barcd": _barcode, "_": int(datetime.datetime.now().timestamp() * 1000)},
+            )
+            ticket = _resp.get("ticket")
+            game_dtl = ticket.get("game_dtl") if ticket else []
+            return [
+                DhLotto645.Game(
+                    slot=game.get("idx"),
+                    mode=DhLotto645SelMode.value_of(str(game.get("type", 3))),
+                    numbers=game.get("num", []),
+                )
+                for game in game_dtl
+            ]
+
+        try:
+            results = await self.client.async_get_buy_list("LO40")
+            items: List[DhLotto645.BuyHistoryData] = []
+            for result in results:
+                if result.get("ltEpsd") != round_no:
+                    continue
+                order_no = result.get("ntslOrdrNo")
+                barcode = result.get("gmInfo")
+                items.append(
+                    DhLotto645.BuyHistoryData(
+                        round_no=result.get("ltEpsd"),
+                        barcode=barcode,
+                        result=result.get("ltWnResult"),
+                        games=await async_get_receipt(order_no, barcode),
+                    )
+                )
+                if sum(len(item.games) for item in items) >= 5:
+                    break
+            return items
+        except Exception as ex:
+            raise DhLotteryError(
+                f"[ERROR] Failed to query purchase history for round {round_no}: {ex}"
+            ) from ex

@@ -47,6 +47,8 @@ class AccountData:
         self.analyzer: Optional[DhLottoAnalyzer] = None
         self.manual_numbers_state = "auto,auto,auto,auto,auto,auto"
         self.update_task: Optional[asyncio.Task] = None
+        # 구매 불가 시간대(토요일 20:00~일요일 06:00)에 이전 회차 당첨 결과 1회만 동기화
+        self.prev_round_result_synced_when_unavailable: bool = False
 
 # Configuration variables
 config = {
@@ -573,7 +575,7 @@ def is_ingress_request(request: Request) -> bool:
 
 
 async def background_tasks_for_account(account: AccountData):
-    """Background tasks. 구매 불가 시간대에는 동기화/로그인을 수행하지 않음."""
+    """Background tasks. 구매 불가 시간대에는 전체 동기화 스킵, 이전 회차 당첨 결과만 1회 동기화."""
     username = account.username
 
     if not account.client or not account.client.logged_in:
@@ -581,13 +583,29 @@ async def background_tasks_for_account(account: AccountData):
         return
 
     await asyncio.sleep(10)
+    was_purchase_available = True
 
     while True:
         try:
-            if not is_purchase_available_now():
-                logger.info(f"[BG][{username}] Skipping sync (purchase unavailable time, KST)")
+            purchase_available_now = is_purchase_available_now()
+            if not purchase_available_now:
+                was_purchase_available = False
+                # 구매 불가 시간대: 이전 회차 당첨 결과 1회만 동기화 (추첨 후 바로 확인용)
+                if not account.prev_round_result_synced_when_unavailable:
+                    try:
+                        await update_prev_round_result_sensors_for_account(account)
+                        account.prev_round_result_synced_when_unavailable = True
+                        logger.info(f"[BG][{username}] Prev-round result sync done (once per unavailable period)")
+                    except Exception as e:
+                        logger.warning(f"[BG][{username}] Prev-round result sync failed: {e}")
+                else:
+                    logger.info(f"[BG][{username}] Skipping sync (purchase unavailable time, KST)")
                 await asyncio.sleep(config["update_interval"])
                 continue
+            # 구매 가능 시간대: 플래그 리셋, 전체 동기화
+            if not was_purchase_available:
+                account.prev_round_result_synced_when_unavailable = False
+            was_purchase_available = True
             await update_sensors_for_account(account)
             await asyncio.sleep(config["update_interval"])
         except asyncio.CancelledError:
@@ -595,6 +613,131 @@ async def background_tasks_for_account(account: AccountData):
         except Exception as e:
             logger.error(f"[BG][{account.username}] Error: {e}", exc_info=True)
             await asyncio.sleep(60)
+
+
+async def update_prev_round_result_sensors_for_account(account: AccountData):
+    """
+    이전 회차(최근 추첨 완료 회차) 구매내역 및 당첨결과 센서만 동기화.
+    구매 불가 시간대(토요일 20:00~일요일 06:00)에 1회만 호출되어 추첨 결과를 바로 확인할 수 있게 함.
+    """
+    username = account.username
+    if not config["enable_lotto645"] or not account.lotto_645 or not account.analyzer:
+        return
+
+    # 로그인 확인 (구매 불가 시간대에도 구매내역 조회를 위해 로그인 필요)
+    if not account.client:
+        return
+    if not account.client.logged_in:
+        try:
+            await account.client.async_login()
+        except Exception as e:
+            logger.warning(f"[PREV_ROUND][{username}] Login failed: {e}")
+            return
+
+    try:
+        latest_round_no = await account.lotto_645.async_get_latest_round_no()
+        history = await account.lotto_645.async_get_buy_history_for_round(latest_round_no)
+
+        # 이전 회차 회차 번호 센서
+        await publish_sensor_for_account(account, "lotto45_prev_round", latest_round_no, {
+            "friendly_name": "이전 회차 (최근 추첨)",
+            "icon": "mdi:counter",
+        })
+
+        all_games: list[dict] = []
+        for purchase in history:
+            for game in purchase.games:
+                all_games.append({
+                    "game": game,
+                    "round_no": purchase.round_no,
+                    "result": purchase.result,
+                })
+                if len(all_games) >= 5:
+                    break
+            if len(all_games) >= 5:
+                break
+
+        winning_data = await account.lotto_645.async_get_round_info(latest_round_no)
+        winning_numbers_check = winning_data.numbers
+        bonus_number_check = winning_data.bonus_num
+
+        for i in range(1, 6):
+            if i <= len(all_games):
+                game_info = all_games[i - 1]
+                game = game_info["game"]
+                round_no = game_info["round_no"]
+                numbers_str = ", ".join(map(str, game.numbers))
+
+                await publish_sensor_for_account(account, f"lotto45_prev_game_{i}", numbers_str, {
+                    "slot": game.slot,
+                    "슬롯": game.slot,
+                    "mode": str(game.mode),
+                    "선택": str(game.mode),
+                    "numbers": game.numbers,
+                    "round_no": round_no,
+                    "result": game_info["result"],
+                    "friendly_name": f"이전 회차 게임 {i}",
+                    "icon": f"mdi:numeric-{i}-box-multiple",
+                })
+
+                try:
+                    check_result = await account.analyzer.async_check_winning(game.numbers, round_no)
+                    matching_count = check_result["matching_count"]
+                    bonus_match = check_result["bonus_match"]
+                    rank = check_result["rank"]
+
+                    if rank == 1:
+                        result_text, result_icon, result_color = "1등 당첨", "mdi:trophy", "gold"
+                    elif rank == 2:
+                        result_text, result_icon, result_color = "2등 당첨", "mdi:medal", "silver"
+                    elif rank == 3:
+                        result_text, result_icon, result_color = "3등 당첨", "mdi:medal-outline", "bronze"
+                    elif rank == 4:
+                        result_text, result_icon, result_color = "4등 당첨", "mdi:currency-krw", "blue"
+                    elif rank == 5:
+                        result_text, result_icon, result_color = "5등 당첨", "mdi:cash", "green"
+                    else:
+                        result_text, result_icon, result_color = "낙첨", "mdi:close-circle-outline", "red"
+
+                    await publish_sensor_for_account(account, f"lotto45_prev_game_{i}_result", result_text, {
+                        "round_no": round_no,
+                        "my_numbers": game.numbers,
+                        "winning_numbers": winning_numbers_check,
+                        "bonus_number": bonus_number_check,
+                        "matching_count": matching_count,
+                        "bonus_match": bonus_match,
+                        "rank": rank,
+                        "result": result_text,
+                        "color": result_color,
+                        "friendly_name": f"이전 회차 게임 {i} 결과",
+                        "icon": result_icon,
+                    })
+                except Exception as e:
+                    logger.warning(f"[PREV_ROUND][{username}] Failed to check game {i}: {e}")
+                    await publish_sensor_for_account(account, f"lotto45_prev_game_{i}_result", "Check Failed", {
+                        "round_no": round_no,
+                        "my_numbers": game.numbers,
+                        "error": str(e),
+                        "friendly_name": f"이전 회차 게임 {i} 결과",
+                        "icon": "mdi:alert-circle-outline",
+                    })
+            else:
+                await publish_sensor_for_account(account, f"lotto45_prev_game_{i}", "Empty", {
+                    "slot": "-", "슬롯": "-", "mode": "-", "선택": "-",
+                    "numbers": [], "round_no": 0, "result": "-",
+                    "friendly_name": f"이전 회차 게임 {i}",
+                    "icon": f"mdi:numeric-{i}-box-outline",
+                })
+                await publish_sensor_for_account(account, f"lotto45_prev_game_{i}_result", "Empty", {
+                    "round_no": 0, "my_numbers": [], "winning_numbers": [], "bonus_number": 0,
+                    "matching_count": 0, "bonus_match": False, "rank": 0, "result": "Empty", "color": "grey",
+                    "friendly_name": f"이전 회차 게임 {i} 결과",
+                    "icon": "mdi:circle-outline",
+                })
+
+        logger.info(f"[PREV_ROUND][{username}] Prev-round sensors updated (round {latest_round_no}, games: {len(all_games)})")
+    except Exception as e:
+        logger.warning(f"[PREV_ROUND][{username}] Failed: {e}", exc_info=True)
 
 
 async def update_sensors_for_account(account: AccountData):
@@ -946,6 +1089,68 @@ async def update_sensors_for_account(account: AccountData):
                             "friendly_name": f"게임 {i} 결과",
                             "icon": "mdi:circle-outline",
                         })
+
+                # 이전 회차(최근 추첨) 구매내역 및 당첨결과 센서 (구매 가능 시간대에도 동기화)
+                prev_round_games = [g for g in all_games if g["round_no"] == latest_round_no][:5]
+                await publish_sensor_for_account(account, "lotto45_prev_round", latest_round_no, {
+                    "friendly_name": "이전 회차 (최근 추첨)",
+                    "icon": "mdi:counter",
+                })
+                try:
+                    winning_data_prev = await account.lotto_645.async_get_round_info(latest_round_no)
+                    for i in range(1, 6):
+                        if i <= len(prev_round_games):
+                            gp = prev_round_games[i - 1]
+                            g = gp["game"]
+                            rn = gp["round_no"]
+                            nums_str = ", ".join(map(str, g.numbers))
+                            await publish_sensor_for_account(account, f"lotto45_prev_game_{i}", nums_str, {
+                                "slot": g.slot, "슬롯": g.slot, "mode": str(g.mode), "선택": str(g.mode),
+                                "numbers": g.numbers, "round_no": rn, "result": gp["result"],
+                                "friendly_name": f"이전 회차 게임 {i}", "icon": f"mdi:numeric-{i}-box-multiple",
+                            })
+                            try:
+                                cr = await account.analyzer.async_check_winning(g.numbers, rn)
+                                rank = cr["rank"]
+                                if rank == 1:
+                                    rt, ri, rc = "1등 당첨", "mdi:trophy", "gold"
+                                elif rank == 2:
+                                    rt, ri, rc = "2등 당첨", "mdi:medal", "silver"
+                                elif rank == 3:
+                                    rt, ri, rc = "3등 당첨", "mdi:medal-outline", "bronze"
+                                elif rank == 4:
+                                    rt, ri, rc = "4등 당첨", "mdi:currency-krw", "blue"
+                                elif rank == 5:
+                                    rt, ri, rc = "5등 당첨", "mdi:cash", "green"
+                                else:
+                                    rt, ri, rc = "낙첨", "mdi:close-circle-outline", "red"
+                                await publish_sensor_for_account(account, f"lotto45_prev_game_{i}_result", rt, {
+                                    "round_no": rn, "my_numbers": g.numbers,
+                                    "winning_numbers": winning_data_prev.numbers,
+                                    "bonus_number": winning_data_prev.bonus_num,
+                                    "matching_count": cr["matching_count"], "bonus_match": cr["bonus_match"],
+                                    "rank": rank, "result": rt, "color": rc,
+                                    "friendly_name": f"이전 회차 게임 {i} 결과", "icon": ri,
+                                })
+                            except Exception as e:
+                                logger.warning(f"[SENSOR][{username}] Prev game {i} result check failed: {e}")
+                                await publish_sensor_for_account(account, f"lotto45_prev_game_{i}_result", "Check Failed", {
+                                    "round_no": rn, "my_numbers": g.numbers, "error": str(e),
+                                    "friendly_name": f"이전 회차 게임 {i} 결과", "icon": "mdi:alert-circle-outline",
+                                })
+                        else:
+                            await publish_sensor_for_account(account, f"lotto45_prev_game_{i}", "Empty", {
+                                "slot": "-", "슬롯": "-", "mode": "-", "선택": "-",
+                                "numbers": [], "round_no": 0, "result": "-",
+                                "friendly_name": f"이전 회차 게임 {i}", "icon": f"mdi:numeric-{i}-box-outline",
+                            })
+                            await publish_sensor_for_account(account, f"lotto45_prev_game_{i}_result", "Empty", {
+                                "round_no": 0, "my_numbers": [], "winning_numbers": [], "bonus_number": 0,
+                                "matching_count": 0, "bonus_match": False, "rank": 0, "result": "Empty", "color": "grey",
+                                "friendly_name": f"이전 회차 게임 {i} 결과", "icon": "mdi:circle-outline",
+                            })
+                except Exception as e:
+                    logger.warning(f"[SENSOR][{username}] Prev-round sensors failed: {e}")
                 
                 # Weekly purchase count
                 weekly_limit = 5
