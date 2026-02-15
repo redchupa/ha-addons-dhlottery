@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [redchupa-2-0-1] - 2026-02-18
+
+### Fixed
+- **기존 센서 ID 호환**: `lotto45_current_game_{i}` → `lotto45_game_{i}` 복원 (대시보드 카드 호환)
+
+---
+
 ## [redchupa-2-0-0] - 2026-02-18
 
 ### Added

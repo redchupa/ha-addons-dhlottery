@@ -969,7 +969,7 @@ async def update_sensors_for_account(account: AccountData):
                 
                 # 구매 게임 (현재): 구매 게임 (이전)에 내역이 있으므로 항상 "구매 내역 없음" 표시
                 for i in range(1, 6):
-                    await publish_sensor_for_account(account, f"lotto45_current_game_{i}", "구매 내역 없음", {
+                    await publish_sensor_for_account(account, f"lotto45_game_{i}", "구매 내역 없음", {
                         "slot": "-",
                         "슬롯": "-",
                         "mode": "-",
@@ -980,7 +980,7 @@ async def update_sensors_for_account(account: AccountData):
                         "friendly_name": f"구매 게임 {i} (현재)",
                         "icon": f"mdi:numeric-{i}-box-outline",
                     })
-                    await publish_sensor_for_account(account, f"lotto45_current_game_{i}_result", "구매 내역 없음", {
+                    await publish_sensor_for_account(account, f"lotto45_game_{i}_result", "구매 내역 없음", {
                         "round_no": 0,
                         "my_numbers": [],
                         "winning_numbers": [],
