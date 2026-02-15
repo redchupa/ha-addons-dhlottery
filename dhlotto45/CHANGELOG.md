@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [redchupa-2-0-2] - 2026-02-18
+
+### Fixed
+- **구매 게임 센서 복원**: lotto45_game_{i}에 구매내역 및 미추첨/당첨 결과 다시 표시 (이전 "구매 내역 없음" 고정 표시 롤백)
+
+---
+
 ## [redchupa-2-0-1] - 2026-02-18
 
 ### Fixed
