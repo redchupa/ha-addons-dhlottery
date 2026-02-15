@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [redchupa-2-0-4] - 2026-02-18
+
+### Changed
+- **구매 게임 (현재) 결과**: ltWnResult API 값 직접 사용 (async_check_winning 제거)
+
+---
+
 ## [redchupa-2-0-3] - 2026-02-18
 
 ### Changed

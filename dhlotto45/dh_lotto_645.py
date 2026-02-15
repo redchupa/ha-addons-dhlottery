@@ -11,6 +11,23 @@ from dh_lottery_client import DhLotteryClient, DhLotteryError
 _LOGGER = logging.getLogger(__name__)
 
 
+def _rank_drawed_to_result(rank: int, drawed: bool) -> str:
+    """lotto645TicketDetail game_dtl[].rank + drawed → 결과 텍스트."""
+    if not drawed:
+        return "미추첨"
+    if rank == 1:
+        return "1등 당첨"
+    if rank == 2:
+        return "2등 당첨"
+    if rank == 3:
+        return "3등 당첨"
+    if rank == 4:
+        return "4등 당첨"
+    if rank == 5:
+        return "5등 당첨"
+    return "낙첨"
+
+
 class DhLotto645Error(DhLotteryError):
     """DH Lotto 645 exception class."""
 
@@ -118,7 +135,11 @@ class DhLotto645:
         round_no: int
         barcode: str
         result: str
-        games: List["DhLotto645.Game"] = field(default_factory=lambda: [])
+        game_details: List[dict] = field(default_factory=lambda: [])  # [{"game": Game, "rank": int, "drawed": bool}]
+
+        @property
+        def games(self) -> List["DhLotto645.Game"]:
+            return [gd["game"] for gd in self.game_details]
 
     def __init__(self, client: DhLotteryClient):
         """Initialize DhLotto645 class."""
@@ -344,27 +365,38 @@ class DhLotto645:
             ) from ex
 
     async def async_get_buy_history_this_week(self) -> list[BuyHistoryData]:
-        """Query purchase history for the last week."""
+        """Query purchase history for the last week. game_dtl[].rank 사용."""
+
+        end_date = datetime.datetime.now()
+        start_date = end_date - datetime.timedelta(days=7)
+        srch_str = start_date.strftime("%Y%m%d")
+        srch_end = end_date.strftime("%Y%m%d")
 
         async def async_get_receipt(
             _order_no: str, _barcode: str
-        ) -> List[DhLotto645.Game]:
-            """Get receipt."""
+        ) -> List[dict]:
+            """Get receipt with game-level rank from lotto645TicketDetail."""
             _resp = await self.client.async_get_with_login('mypage/lotto645TicketDetail.do',
-                params={"ntslOrdrNo": _order_no, "barcd": _barcode, "_": int(datetime.datetime.now().timestamp() * 1000)},
+                params={
+                    "ntslOrdrNo": _order_no,
+                    "barcd": _barcode,
+                    "srchStrDt": srch_str,
+                    "srchEndDt": srch_end,
+                    "_": int(datetime.datetime.now().timestamp() * 1000),
+                },
             )
             ticket = _resp.get("ticket")
             game_dtl = ticket.get("game_dtl") if ticket else []
-            _slots: List[DhLotto645.Game] = []
+            drawed = ticket.get("drawed", False)
+            details: List[dict] = []
             for game in game_dtl:
-                _slots.append(
-                    DhLotto645.Game(
-                        slot=game.get("idx"),
-                        mode=DhLotto645SelMode.value_of(str(game.get("type", 3))),
-                        numbers=game.get("num", []),
-                    )
+                g = DhLotto645.Game(
+                    slot=game.get("idx"),
+                    mode=DhLotto645SelMode.value_of(str(game.get("type", 3))),
+                    numbers=game.get("num", []),
                 )
-            return _slots
+                details.append({"game": g, "rank": game.get("rank", 0), "drawed": drawed})
+            return details
 
         try:
             results = await self.client.async_get_buy_list("LO40")
@@ -372,15 +404,16 @@ class DhLotto645:
             for result in results:
                 order_no = result.get("ntslOrdrNo")
                 barcode = result.get("gmInfo")
+                game_details = await async_get_receipt(order_no, barcode)
                 items.append(
                     DhLotto645.BuyHistoryData(
                         round_no=result.get("ltEpsd"),
                         barcode=barcode,
                         result=result.get("ltWnResult"),
-                        games=await async_get_receipt(order_no, barcode),
+                        game_details=game_details,
                     )
                 )
-                if sum([len(item.games) for item in items]) >= 5:
+                if sum(len(item.game_details) for item in items) >= 5:
                     break
             return items
         except Exception as ex:
@@ -389,23 +422,31 @@ class DhLotto645:
             ) from ex
 
     async def async_get_buy_history_for_round(self, round_no: int) -> list[BuyHistoryData]:
-        """특정 회차 구매 내역 조회 (이전 회차 당첨 결과용)."""
+        """특정 회차 구매 내역 조회. game_dtl[].rank 사용."""
 
-        async def async_get_receipt(
-            _order_no: str, _barcode: str
-        ) -> List[DhLotto645.Game]:
+        end_date = datetime.datetime.now()
+        start_date = end_date - datetime.timedelta(days=7)
+        srch_str = start_date.strftime("%Y%m%d")
+        srch_end = end_date.strftime("%Y%m%d")
+
+        async def async_get_receipt(_order_no: str, _barcode: str) -> List[dict]:
             _resp = await self.client.async_get_with_login('mypage/lotto645TicketDetail.do',
-                params={"ntslOrdrNo": _order_no, "barcd": _barcode, "_": int(datetime.datetime.now().timestamp() * 1000)},
+                params={
+                    "ntslOrdrNo": _order_no, "barcd": _barcode,
+                    "srchStrDt": srch_str, "srchEndDt": srch_end,
+                    "_": int(datetime.datetime.now().timestamp() * 1000),
+                },
             )
             ticket = _resp.get("ticket")
             game_dtl = ticket.get("game_dtl") if ticket else []
+            drawed = ticket.get("drawed", False)
             return [
-                DhLotto645.Game(
-                    slot=game.get("idx"),
-                    mode=DhLotto645SelMode.value_of(str(game.get("type", 3))),
-                    numbers=game.get("num", []),
-                )
-                for game in game_dtl
+                {"game": DhLotto645.Game(
+                    slot=g.get("idx"),
+                    mode=DhLotto645SelMode.value_of(str(g.get("type", 3))),
+                    numbers=g.get("num", []),
+                ), "rank": g.get("rank", 0), "drawed": drawed}
+                for g in game_dtl
             ]
 
         try:
@@ -416,15 +457,16 @@ class DhLotto645:
                     continue
                 order_no = result.get("ntslOrdrNo")
                 barcode = result.get("gmInfo")
+                game_details = await async_get_receipt(order_no, barcode)
                 items.append(
                     DhLotto645.BuyHistoryData(
                         round_no=result.get("ltEpsd"),
                         barcode=barcode,
                         result=result.get("ltWnResult"),
-                        games=await async_get_receipt(order_no, barcode),
+                        game_details=game_details,
                     )
                 )
-                if sum(len(item.games) for item in items) >= 5:
+                if sum(len(item.game_details) for item in items) >= 5:
                     break
             return items
         except Exception as ex:
@@ -434,27 +476,35 @@ class DhLotto645:
 
     async def async_get_prev_drawn_round_and_history(self) -> tuple[int, list[BuyHistoryData]]:
         """
-        selectMyLotteryledger.do API에서 ltWnResult(당첨결과)를 직접 사용.
         이전 회차 = 추첨 완료된(ltWnResult != '미추첨') 건 중 가장 최근 회차.
-        Returns: (이전_회차_번호, 구매내역_리스트)
+        결과는 lotto645TicketDetail game_dtl[].rank 사용.
         """
-        async def async_get_receipt(_order_no: str, _barcode: str) -> List[DhLotto645.Game]:
+        end_date = datetime.datetime.now()
+        start_date = end_date - datetime.timedelta(days=7)
+        srch_str = start_date.strftime("%Y%m%d")
+        srch_end = end_date.strftime("%Y%m%d")
+
+        async def async_get_receipt(_order_no: str, _barcode: str) -> List[dict]:
             _resp = await self.client.async_get_with_login('mypage/lotto645TicketDetail.do',
-                params={"ntslOrdrNo": _order_no, "barcd": _barcode, "_": int(datetime.datetime.now().timestamp() * 1000)},
+                params={
+                    "ntslOrdrNo": _order_no, "barcd": _barcode,
+                    "srchStrDt": srch_str, "srchEndDt": srch_end,
+                    "_": int(datetime.datetime.now().timestamp() * 1000),
+                },
             )
             ticket = _resp.get("ticket")
             game_dtl = ticket.get("game_dtl") if ticket else []
+            drawed = ticket.get("drawed", False)
             return [
-                DhLotto645.Game(
-                    slot=game.get("idx"),
-                    mode=DhLotto645SelMode.value_of(str(game.get("type", 3))),
-                    numbers=game.get("num", []),
-                )
-                for game in game_dtl
+                {"game": DhLotto645.Game(
+                    slot=g.get("idx"),
+                    mode=DhLotto645SelMode.value_of(str(g.get("type", 3))),
+                    numbers=g.get("num", []),
+                ), "rank": g.get("rank", 0), "drawed": drawed}
+                for g in game_dtl
             ]
 
         results = await self.client.async_get_buy_list("LO40")
-        # 추첨 완료된 건만 필터, 가장 높은 회차 = 이전 회차
         drawn_items = [r for r in results if r.get("ltWnResult") and r.get("ltWnResult") != "미추첨"]
         if not drawn_items:
             return 0, []
@@ -465,14 +515,15 @@ class DhLotto645:
                 continue
             order_no = result.get("ntslOrdrNo")
             barcode = result.get("gmInfo")
+            game_details = await async_get_receipt(order_no, barcode)
             items.append(
                 DhLotto645.BuyHistoryData(
                     round_no=result.get("ltEpsd"),
                     barcode=barcode,
                     result=result.get("ltWnResult"),
-                    games=await async_get_receipt(order_no, barcode),
+                    game_details=game_details,
                 )
             )
-            if sum(len(item.games) for item in items) >= 5:
+            if sum(len(item.game_details) for item in items) >= 5:
                 break
         return prev_round_no, items

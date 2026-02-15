@@ -24,7 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from dh_lottery_client import DhLotteryClient, DhLotteryError, DhLotteryLoginError
-from dh_lotto_645 import DhLotto645, DhLotto645SelMode, DhLotto645Error
+from dh_lotto_645 import DhLotto645, DhLotto645SelMode, DhLotto645Error, _rank_drawed_to_result
 from dh_lotto_analyzer import DhLottoAnalyzer
 from mqtt_discovery import MQTTDiscovery, publish_sensor_mqtt
 
@@ -638,7 +638,7 @@ def _ltwn_result_to_icon_color(ltwn_result: str) -> tuple[str, str]:
 async def update_prev_round_result_sensors_for_account(account: AccountData):
     """
     이전 회차(추첨 완료 회차) 구매내역 및 당첨결과 센서만 동기화.
-    selectMyLotteryledger.do API의 ltWnResult를 직접 사용 (별도 계산 없음).
+    lotto645TicketDetail.do의 game_dtl[].rank + drawed 기반 결과 사용.
     구매 불가 시간대(토요일 20:00~일요일 06:00)에 1회만 호출.
     """
     username = account.username
@@ -681,11 +681,11 @@ async def update_prev_round_result_sensors_for_account(account: AccountData):
 
         all_games: list[dict] = []
         for purchase in history:
-            for game in purchase.games:
+            for gd in purchase.game_details:
                 all_games.append({
-                    "game": game,
+                    "game": gd["game"],
                     "round_no": purchase.round_no,
-                    "result": purchase.result,
+                    "result": _rank_drawed_to_result(gd["rank"], gd["drawed"]),
                 })
                 if len(all_games) >= 5:
                     break
@@ -949,13 +949,13 @@ async def update_sensors_for_account(account: AccountData):
                         "icon": "mdi:receipt-text",
                     })
                     
-                    # Collect all games (max 5)
+                    # Collect all games (max 5) - lotto645TicketDetail game_dtl[].rank 사용
                     for purchase in reversed(history):
-                        for game in purchase.games:
+                        for gd in purchase.game_details:
                             all_games.append({
-                                'game': game,
+                                'game': gd['game'],
                                 'round_no': purchase.round_no,
-                                'result': purchase.result
+                                'result': _rank_drawed_to_result(gd['rank'], gd['drawed']),
                             })
                             if len(all_games) >= 5:
                                 break
@@ -989,45 +989,22 @@ async def update_sensors_for_account(account: AccountData):
                             "icon": f"mdi:numeric-{i}-box-multiple",
                         })
                         try:
-                            result_text = "미추첨"
-                            result_icon = "mdi:clock-outline"
-                            result_color = "grey"
-                            matching_count = 0
-                            bonus_match = False
+                            ltwn_result = game_info["result"] or "미추첨"
+                            if round_no > latest_round_no:
+                                weekly_purchase_count += 1
+                            result_icon, result_color = _ltwn_result_to_icon_color(ltwn_result)
                             winning_numbers_check = []
                             bonus_number_check = 0
-                            rank = 0
                             if round_no <= latest_round_no:
                                 winning_data = await account.lotto_645.async_get_round_info(round_no)
                                 winning_numbers_check = winning_data.numbers
                                 bonus_number_check = winning_data.bonus_num
-                                check_result = await account.analyzer.async_check_winning(game.numbers, round_no)
-                                matching_count = check_result["matching_count"]
-                                bonus_match = check_result["bonus_match"]
-                                rank = check_result["rank"]
-                                if rank == 1:
-                                    result_text, result_icon, result_color = "1등 당첨", "mdi:trophy", "gold"
-                                elif rank == 2:
-                                    result_text, result_icon, result_color = "2등 당첨", "mdi:medal", "silver"
-                                elif rank == 3:
-                                    result_text, result_icon, result_color = "3등 당첨", "mdi:medal-outline", "bronze"
-                                elif rank == 4:
-                                    result_text, result_icon, result_color = "4등 당첨", "mdi:currency-krw", "blue"
-                                elif rank == 5:
-                                    result_text, result_icon, result_color = "5등 당첨", "mdi:cash", "green"
-                                else:
-                                    result_text, result_icon, result_color = "낙첨", "mdi:close-circle-outline", "red"
-                            else:
-                                weekly_purchase_count += 1
-                            await publish_sensor_for_account(account, f"lotto45_game_{i}_result", result_text, {
+                            await publish_sensor_for_account(account, f"lotto45_game_{i}_result", ltwn_result, {
                                 "round_no": round_no,
                                 "my_numbers": game.numbers,
                                 "winning_numbers": winning_numbers_check,
                                 "bonus_number": bonus_number_check,
-                                "matching_count": matching_count,
-                                "bonus_match": bonus_match,
-                                "rank": rank,
-                                "result": result_text,
+                                "result": ltwn_result,
                                 "color": result_color,
                                 "friendly_name": f"구매 게임 {i} (현재) 결과",
                                 "icon": result_icon,
@@ -1073,11 +1050,11 @@ async def update_sensors_for_account(account: AccountData):
                     prev_round_no, prev_history = await account.lotto_645.async_get_prev_drawn_round_and_history()
                     prev_round_games = []
                     for purchase in prev_history:
-                        for game in purchase.games:
+                        for gd in purchase.game_details:
                             prev_round_games.append({
-                                "game": game,
+                                "game": gd["game"],
                                 "round_no": purchase.round_no,
-                                "result": purchase.result,
+                                "result": _rank_drawed_to_result(gd["rank"], gd["drawed"]),
                             })
                             if len(prev_round_games) >= 5:
                                 break
